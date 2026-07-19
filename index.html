@@ -373,8 +373,10 @@
         <button class="tab-btn" data-tab="import" data-admin-only>Import</button>
         <button class="tab-btn" data-tab="categorize" data-admin-only>Kategorisieren</button>
         <button class="tab-btn" data-tab="all">Alle Buchungen</button>
+        <button class="tab-btn" data-tab="rules" data-admin-only>Regeln</button>
       </nav>
       <div class="header-user">
+        <button id="undoBtn" class="icon-btn" title="Nichts rückgängig zu machen" data-admin-only disabled>↺</button>
         <button id="refreshBtn" class="icon-btn" title="Aktualisieren">⟳</button>
         <button id="themeToggleBtn" class="icon-btn" title="Darstellung umschalten">🌙</button>
         <span id="userRoleBadge" class="role-badge"></span>
@@ -410,7 +412,8 @@ const TRANSACTIONS_COLLECTION = 'kontoapp_transactions';
 const RULES_COLLECTION = 'kontoapp_rules';
 
 const CATEGORIES = [
-  'Essen + Trinken',
+  'Supermarkt',
+  'Drogerie',
   'Gastronomie / Freizeit',
   'Wohnung',
   'Einkünfte',
@@ -422,8 +425,19 @@ const CATEGORIES = [
 const DEFAULT_CATEGORY = 'nicht klassifiziert';
 const INCOME_CATEGORY = 'Einkünfte';
 
+// Alte Kategorienamen -> neue Namen. Wird beim Start auf bestehende Buchungen/Regeln
+// angewendet (Migration) und beim CSV-Import auf Werte aus der Kategorie-Spalte der
+// Quelldatei (damit ein Reimport der historischen Datei weiterhin korrekt erkannt wird).
+const CATEGORY_ALIASES = {
+  'Essen + Trinken': 'Supermarkt',
+};
+function normalizeCategory(cat){
+  return CATEGORY_ALIASES[cat] || cat;
+}
+
 const CATEGORY_COLORS_LIGHT = {
-  'Essen + Trinken': '#8A6D3B',
+  'Supermarkt': '#8A6D3B',
+  'Drogerie': '#4E8B8B',
   'Gastronomie / Freizeit': '#B5432B',
   'Wohnung': '#3A5C82',
   'Einkünfte': '#1F7A54',
@@ -433,7 +447,8 @@ const CATEGORY_COLORS_LIGHT = {
   'nicht klassifiziert': '#9AA098',
 };
 const CATEGORY_COLORS_DARK = {
-  'Essen + Trinken': '#C9A667',
+  'Supermarkt': '#C9A667',
+  'Drogerie': '#7FC2C2',
   'Gastronomie / Freizeit': '#E58367',
   'Wohnung': '#7FA6D6',
   'Einkünfte': '#4FB587',
@@ -495,11 +510,15 @@ const state = {
   },
   categorizeSelection: new Set(),
   categorizeSearch: '',
+  undoStack: [],
+  rulesSearch: '',
   allView: {
     month: 'all',
+    monthInitialized: false, // wird beim ersten Rendern auf den letzten Monat mit Buchungen gesetzt
     category: 'all',
     search: '',
     selection: new Set(),
+    visibleCount: 150, // Pagination: verhindert Tab-Abstürze bei sehr langen Listen
   },
   importState: emptyImportState(),
 };
@@ -525,6 +544,28 @@ function chunkArray(arr, size){
   const out = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
+}
+
+function exportTransactionsCsv(transactions, filename){
+  if (!transactions.length){ showToast('Keine Buchungen zum Exportieren.', 'error'); return; }
+  const escCsv = (s) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+  const header = ['Datum', 'Beschreibung', 'Betrag (EUR)', 'Kategorie'];
+  const lines = [header.join(';')];
+  const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
+  for (const t of sorted){
+    const amountStr = t.amount.toFixed(2).replace('.', ',');
+    lines.push([escCsv(formatDateDisplay(t.date)), escCsv(t.description), amountStr, escCsv(t.category)].join(';'));
+  }
+  const csvContent = '\uFEFF' + lines.join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`${transactions.length} Buchung(en) exportiert.`, 'success');
 }
 
 const currencyFormatter = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
@@ -816,12 +857,73 @@ async function upsertRule(keyword, category){
   }
 }
 
+async function deleteRule(id){
+  if (!confirm('Diese Regel wirklich löschen? Zukünftige Importe wenden sie dann nicht mehr an.')) return;
+  try {
+    await deleteDoc(doc(db, RULES_COLLECTION, id));
+    showToast('Regel gelöscht.', 'success');
+  } catch (err){
+    showToast('Fehler beim Löschen der Regel: ' + err.message, 'error');
+  }
+}
+
 /* ========================================================================
    FIRESTORE: SCHREIBOPERATIONEN
    ======================================================================== */
+/* ------------------------------------------------------------------------
+   UNDO (letzte Aktionen rückgängig machen)
+   ------------------------------------------------------------------------ */
+function pushUndo(entry){
+  state.undoStack.push(entry);
+  if (state.undoStack.length > 10) state.undoStack.shift();
+  updateUndoButton();
+}
+
+function updateUndoButton(){
+  const btn = document.getElementById('undoBtn');
+  if (!btn) return;
+  const last = state.undoStack[state.undoStack.length - 1];
+  btn.disabled = !last;
+  btn.title = last ? `Rückgängig: ${last.label}` : 'Nichts rückgängig zu machen';
+}
+
+async function undoLastAction(){
+  const entry = state.undoStack.pop();
+  updateUndoButton();
+  if (!entry) return;
+  try {
+    if (entry.type === 'category'){
+      for (const chunk of chunkArray(entry.restore, 400)){
+        const batch = writeBatch(db);
+        chunk.forEach(r => batch.update(doc(db, TRANSACTIONS_COLLECTION, r.id), { category: r.category }));
+        await batch.commit();
+      }
+    } else if (entry.type === 'delete'){
+      for (const chunk of chunkArray(entry.restore, 400)){
+        const batch = writeBatch(db);
+        chunk.forEach(t => {
+          const { id, ...data } = t;
+          batch.set(doc(db, TRANSACTIONS_COLLECTION, id), data);
+        });
+        await batch.commit();
+      }
+    }
+    showToast(`Rückgängig gemacht: ${entry.label}`, 'success');
+  } catch (err){
+    console.error(err);
+    showToast('Rückgängig machen fehlgeschlagen: ' + err.message, 'error');
+    state.undoStack.push(entry); // Eintrag zurücklegen, da es nicht geklappt hat
+    updateUndoButton();
+  }
+}
+
 async function setTransactionCategory(id, category){
+  const prev = store.transactions.find(t => t.id === id);
   try {
     await updateDoc(doc(db, TRANSACTIONS_COLLECTION, id), { category });
+    if (prev && prev.category !== category){
+      pushUndo({ type: 'category', label: '1 Kategorie-Änderung', restore: [{ id, category: prev.category }] });
+    }
   } catch (err){
     showToast('Fehler beim Aktualisieren: ' + err.message, 'error');
   }
@@ -829,8 +931,10 @@ async function setTransactionCategory(id, category){
 
 async function deleteTransactionById(id){
   if (!confirm('Diese Buchung wirklich löschen?')) return;
+  const prev = store.transactions.find(t => t.id === id);
   try {
     await deleteDoc(doc(db, TRANSACTIONS_COLLECTION, id));
+    if (prev) pushUndo({ type: 'delete', label: '1 gelöschte Buchung', restore: [prev] });
     showToast('Buchung gelöscht.', 'success');
   } catch (err){
     showToast('Fehler beim Löschen: ' + err.message, 'error');
@@ -839,11 +943,19 @@ async function deleteTransactionById(id){
 
 async function bulkAssignCategory(ids, category){
   if (!ids.length){ showToast('Keine Buchungen ausgewählt.', 'error'); return; }
+  const previousStates = ids
+    .map(id => store.transactions.find(t => t.id === id))
+    .filter(Boolean)
+    .map(t => ({ id: t.id, category: t.category }))
+    .filter(r => r.category !== category);
   try {
     for (const chunk of chunkArray(ids, 400)){
       const batch = writeBatch(db);
       chunk.forEach(id => batch.update(doc(db, TRANSACTIONS_COLLECTION, id), { category }));
       await batch.commit();
+    }
+    if (previousStates.length){
+      pushUndo({ type: 'category', label: `Kategorisierung von ${previousStates.length} Buchung(en)`, restore: previousStates });
     }
     showToast(`${ids.length} Buchung(en) als „${category}“ kategorisiert.`, 'success');
   } catch (err){
@@ -857,11 +969,15 @@ async function bulkDeleteTransactions(ids){
     ? 'Diese Buchung wirklich löschen?'
     : `${ids.length} Buchungen wirklich unwiderruflich löschen?`;
   if (!confirm(confirmMsg)) return;
+  const deletedDocs = ids.map(id => store.transactions.find(t => t.id === id)).filter(Boolean);
   try {
     for (const chunk of chunkArray(ids, 400)){
       const batch = writeBatch(db);
       chunk.forEach(id => batch.delete(doc(db, TRANSACTIONS_COLLECTION, id)));
       await batch.commit();
+    }
+    if (deletedDocs.length){
+      pushUndo({ type: 'delete', label: `Löschen von ${deletedDocs.length} Buchung(en)`, restore: deletedDocs });
     }
     showToast(`${ids.length} Buchung(en) gelöscht.`, 'success');
   } catch (err){
@@ -952,6 +1068,31 @@ function maybeInitialRender(){
   if (store.transactionsLoaded && store.rulesLoaded && !state.initialRenderDone){
     state.initialRenderDone = true;
     renderCurrentView();
+    migrateLegacyCategories();
+  }
+}
+
+async function migrateLegacyCategories(){
+  if (state.role !== 'admin') return; // Betrachterin darf ohnehin nicht schreiben
+  const aliasKeys = Object.keys(CATEGORY_ALIASES);
+  const txToFix = store.transactions.filter(t => aliasKeys.includes(t.category));
+  const rulesToFix = store.rules.filter(r => aliasKeys.includes(r.category));
+  if (!txToFix.length && !rulesToFix.length) return;
+  try {
+    for (const chunk of chunkArray(txToFix, 400)){
+      const batch = writeBatch(db);
+      chunk.forEach(t => batch.update(doc(db, TRANSACTIONS_COLLECTION, t.id), { category: CATEGORY_ALIASES[t.category] }));
+      await batch.commit();
+    }
+    for (const r of rulesToFix){
+      await updateDoc(doc(db, RULES_COLLECTION, r.id), { category: CATEGORY_ALIASES[r.category] });
+    }
+    if (txToFix.length || rulesToFix.length){
+      showToast(`Kategorie-Umbenennung: ${txToFix.length} Buchung(en) und ${rulesToFix.length} Regel(n) aktualisiert.`, 'success');
+    }
+  } catch (err){
+    console.error(err);
+    showToast('Fehler bei der Kategorie-Migration: ' + err.message, 'error');
   }
 }
 
@@ -992,7 +1133,7 @@ function setupRoleUI(){
   const badge = document.getElementById('userRoleBadge');
   badge.textContent = state.role === 'admin' ? 'Admin' : 'Nur Lesen';
   badge.className = 'role-badge ' + (state.role === 'admin' ? 'role-admin' : 'role-viewer');
-  if (state.role !== 'admin' && (state.currentTab === 'import' || state.currentTab === 'categorize')){
+  if (state.role !== 'admin' && ['import', 'categorize', 'rules'].includes(state.currentTab)){
     state.currentTab = 'dashboard';
   }
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === state.currentTab));
@@ -1012,6 +1153,7 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
   }
 });
 document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+document.getElementById('undoBtn').addEventListener('click', undoLastAction);
 document.getElementById('refreshBtn').addEventListener('click', () => location.reload());
 document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
 document.getElementById('themeToggleBtnLogin').addEventListener('click', toggleTheme);
@@ -1043,6 +1185,7 @@ function renderCurrentView(){
     case 'import': renderImport(container); break;
     case 'categorize': renderCategorize(container); break;
     case 'all': renderAllTransactions(container); break;
+    case 'rules': renderRules(container); break;
     default: renderDashboard(container);
   }
 }
@@ -1128,11 +1271,76 @@ function computeDashboardData(){
 
   const unclassifiedCount = periodAll.filter(t => t.category === DEFAULT_CATEGORY).length;
 
+  const recurring = detectRecurringTransactions(store.transactions);
+  const recurringIds = new Set();
+  recurring.forEach(r => r.ids.forEach(id => recurringIds.add(id)));
+  const fixedTotal = periodAll
+    .filter(t => t.category !== INCOME_CATEGORY && recurringIds.has(t.id))
+    .reduce((s, t) => s + (-t.amount), 0);
+  const variableTotal = Math.max(0, stats.expense - fixedTotal);
+
+  const topExpenses = computeTopExpenses(periodAll, 10);
+
+  let yoy = null;
+  if (mode === 'month'){
+    const lastYearKey = shiftMonthKey(month, -12);
+    const lastYearTx = store.transactions.filter(t => t.date.slice(0, 7) === lastYearKey);
+    if (lastYearTx.length){
+      yoy = { monthKey: lastYearKey, stats: computeStats(lastYearTx) };
+    }
+  }
+
   return {
     periodAll, periodMonthKeys, allMonthKeys, comparisonMonthKeys,
     stats, avgByCategory, avgExpenseTotal, periodMonthsCount,
     unclassifiedCount, rangeFrom, rangeTo, category,
+    recurring, fixedTotal, variableTotal, topExpenses, yoy,
   };
+}
+
+function detectRecurringTransactions(transactions){
+  const groups = {};
+  for (const t of transactions){
+    if (t.category === INCOME_CATEGORY) continue;
+    const key = (t.description.split(' — ')[0] || t.description).trim().toLowerCase();
+    if (!key) continue;
+    (groups[key] = groups[key] || []).push(t);
+  }
+  const recurring = [];
+  for (const txs of Object.values(groups)){
+    const months = new Set(txs.map(t => t.date.slice(0, 7)));
+    if (months.size < 3) continue; // mind. 3 verschiedene Monate, um "wiederkehrend" zu sein
+    const amounts = txs.map(t => Math.abs(t.amount));
+    const mean = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+    if (mean === 0) continue;
+    const variance = amounts.reduce((a, b) => a + (b - mean) ** 2, 0) / amounts.length;
+    const cv = Math.sqrt(variance) / mean; // Variationskoeffizient: wie stark schwankt der Betrag?
+    if (cv > 0.15) continue; // zu unregelmäßig im Betrag, um als Fixkosten zu gelten
+    recurring.push({
+      displayName: txs[0].description.split(' — ')[0] || txs[0].description,
+      category: txs[txs.length - 1].category,
+      count: txs.length,
+      monthsCount: months.size,
+      avgAmount: mean,
+      ids: new Set(txs.map(t => t.id)),
+    });
+  }
+  return recurring.sort((a, b) => b.avgAmount - a.avgAmount);
+}
+
+function computeTopExpenses(transactions, n){
+  return transactions
+    .filter(t => t.category !== INCOME_CATEGORY && t.amount < 0)
+    .sort((a, b) => a.amount - b.amount)
+    .slice(0, n);
+}
+
+function shiftMonthKey(monthKey, deltaMonths){
+  let [y, m] = monthKey.split('-').map(Number);
+  m += deltaMonths;
+  while (m < 1){ m += 12; y--; }
+  while (m > 12){ m -= 12; y++; }
+  return `${y}-${String(m).padStart(2, '0')}`;
 }
 
 /* ========================================================================
@@ -1426,8 +1634,8 @@ async function buildPreview(){
     if (!candidate.isoDate || isNaN(candidate.amount)) continue;
     const isPending = candidate.status && candidate.status.toLowerCase().includes('vorgemerkt');
     const hash = await computeHash(candidate.isoDate, candidate.amount, row.lineText);
-    const trustedSourceCategory = (candidate.sourceCategory && CATEGORIES.includes(candidate.sourceCategory))
-      ? candidate.sourceCategory : null;
+    const trustedSourceCategory = (candidate.sourceCategory && CATEGORIES.includes(normalizeCategory(candidate.sourceCategory)))
+      ? normalizeCategory(candidate.sourceCategory) : null;
     const existingTx = existingByHash.get(hash);
     let statusFlag = 'ok';
     let existingId = null;
@@ -1770,11 +1978,106 @@ function renderCategorizeRow(t){
 }
 
 /* ========================================================================
+   REGELN: RENDERING
+   ======================================================================== */
+function renderRules(container){
+  const query = state.rulesSearch.trim().toLowerCase();
+  const rules = [...store.rules]
+    .filter(r => !query || r.keyword.includes(query) || r.category.toLowerCase().includes(query))
+    .sort((a, b) => a.keyword.localeCompare(b.keyword, 'de'));
+
+  container.innerHTML = `
+    <div class="view-header">
+      <div>
+        <h2>Regeln</h2>
+        <p class="view-sub">${store.rules.length} Regel(n) — werden beim Import automatisch auf neue Buchungen angewendet.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Neue Regel</h3>
+      <div class="mapping-grid" style="align-items:end;">
+        <label class="field">Schlüsselwort (in der Beschreibung)
+          <input type="text" class="input" id="newRuleKeyword" placeholder="z.B. rewe">
+        </label>
+        <label class="field">Kategorie
+          <select id="newRuleCategory">${categoryOptions(null)}</select>
+        </label>
+        <button id="addRuleBtn" class="btn btn-primary">Regel hinzufügen</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <label class="field" style="max-width:320px; margin-bottom:14px;">Suche
+        <input type="text" class="input" id="rulesSearch" placeholder="Schlüsselwort oder Kategorie durchsuchen …" value="${esc(state.rulesSearch)}">
+      </label>
+      ${rules.length === 0 ? `
+        <div class="empty-state"><div class="big">🔖</div>${store.rules.length === 0 ? 'Noch keine Regeln vorhanden.' : `Keine Treffer für „${esc(state.rulesSearch)}“.`}</div>
+      ` : `
+        <table class="data-table">
+          <thead><tr><th>Schlüsselwort</th><th>Kategorie</th><th></th></tr></thead>
+          <tbody>
+            ${rules.map(r => `
+              <tr data-rule-id="${r.id}">
+                <td><code>${esc(r.keyword)}</code></td>
+                <td><select data-role="ruleCategory">${categoryOptions(r.category)}</select></td>
+                <td><button class="btn btn-danger btn-sm" data-role="deleteRule">🗑</button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `}
+    </div>
+  `;
+
+  const searchInput = document.getElementById('rulesSearch');
+  let searchTimer = null;
+  searchInput.addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    const val = e.target.value;
+    searchTimer = setTimeout(() => { state.rulesSearch = val; renderRules(container); }, 300);
+  });
+
+  document.getElementById('addRuleBtn').addEventListener('click', async () => {
+    const keywordInput = document.getElementById('newRuleKeyword');
+    const keyword = keywordInput.value.trim().toLowerCase();
+    const category = document.getElementById('newRuleCategory').value;
+    if (!keyword){ showToast('Bitte ein Schlüsselwort eingeben.', 'error'); return; }
+    try {
+      await upsertRule(keyword, category);
+      showToast(`Regel „${keyword}“ → „${category}“ gespeichert.`, 'success');
+      keywordInput.value = '';
+    } catch (err){
+      showToast('Fehler beim Speichern der Regel: ' + err.message, 'error');
+    }
+  });
+
+  container.querySelectorAll('[data-rule-id]').forEach(row => {
+    const id = row.dataset.ruleId;
+    row.querySelector('[data-role="ruleCategory"]').addEventListener('change', async e => {
+      try {
+        await updateDoc(doc(db, RULES_COLLECTION, id), { category: e.target.value });
+        showToast('Regel aktualisiert.', 'success');
+      } catch (err){
+        showToast('Fehler beim Aktualisieren: ' + err.message, 'error');
+      }
+    });
+    row.querySelector('[data-role="deleteRule"]').addEventListener('click', () => deleteRule(id));
+  });
+}
+
+
+/* ========================================================================
    ALLE BUCHUNGEN: RENDERING
    ======================================================================== */
 function renderAllTransactions(container){
   const av = state.allView;
   const allMonthKeys = getAllMonthKeys(store.transactions);
+
+  if (!av.monthInitialized){
+    if (allMonthKeys.length) av.month = allMonthKeys[allMonthKeys.length - 1];
+    av.monthInitialized = true;
+  }
 
   let filtered = store.transactions;
   if (av.month !== 'all') filtered = filtered.filter(t => t.date.slice(0, 7) === av.month);
@@ -1786,12 +2089,14 @@ function renderAllTransactions(container){
 
   av.selection = new Set([...av.selection].filter(id => filtered.some(t => t.id === id)));
   const isAdmin = state.role === 'admin';
+  const visible = filtered.slice(0, av.visibleCount);
+  const hasMore = filtered.length > visible.length;
 
   container.innerHTML = `
     <div class="view-header">
       <div>
         <h2>Alle Buchungen</h2>
-        <p class="view-sub">${filtered.length} von ${store.transactions.length} Buchungen</p>
+        <p class="view-sub">${filtered.length} von ${store.transactions.length} Buchungen${hasMore ? ` — ${visible.length} angezeigt` : ''}</p>
       </div>
     </div>
 
@@ -1813,13 +2118,16 @@ function renderAllTransactions(container){
           <input type="text" class="input" id="filterSearch" placeholder="Beschreibung durchsuchen …" value="${esc(av.search)}">
         </label>
       </div>
+      <div style="margin-top:14px;">
+        <button id="exportCsvBtn" class="btn btn-secondary btn-sm">⬇ Als CSV exportieren (${filtered.length})</button>
+      </div>
     </div>
 
     ${isAdmin ? `
       <div class="card">
         <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
           <label style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13.5px;">
-            <input type="checkbox" id="selectAllAllCb"> Alle auswählen
+            <input type="checkbox" id="selectAllAllCb"> Alle ${filtered.length} auswählen
           </label>
           <select id="bulkCategorySelectAll"><option value="">Kategorie wählen…</option>${categoryOptions(null)}</select>
           <button id="bulkAssignAllBtn" class="btn btn-secondary btn-sm">Ausgewählte zuweisen</button>
@@ -1833,19 +2141,29 @@ function renderAllTransactions(container){
         <div class="empty-state"><div class="big">🔍</div>Keine Buchungen gefunden.</div>
       ` : `
         <div class="txn-list">
-          ${filtered.map(t => renderAllRow(t, isAdmin)).join('')}
+          ${visible.map(t => renderAllRow(t, isAdmin)).join('')}
         </div>
+        ${hasMore ? `
+          <div style="text-align:center; margin-top:16px;">
+            <button id="loadMoreBtn" class="btn btn-secondary">Weitere anzeigen (${filtered.length - visible.length} übrig)</button>
+          </div>
+        ` : ''}
       `}
     </div>
   `;
 
-  document.getElementById('filterMonth').addEventListener('change', e => { av.month = e.target.value; renderAllTransactions(container); });
-  document.getElementById('filterCategory').addEventListener('change', e => { av.category = e.target.value; renderAllTransactions(container); });
+  document.getElementById('filterMonth').addEventListener('change', e => { av.month = e.target.value; av.visibleCount = 150; renderAllTransactions(container); });
+  document.getElementById('filterCategory').addEventListener('change', e => { av.category = e.target.value; av.visibleCount = 150; renderAllTransactions(container); });
+  document.getElementById('exportCsvBtn').addEventListener('click', () => {
+    exportTransactionsCsv(filtered, `kontobuch-export-${todayIso()}.csv`);
+  });
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  if (loadMoreBtn) loadMoreBtn.addEventListener('click', () => { av.visibleCount += 150; renderAllTransactions(container); });
   let searchTimer = null;
   document.getElementById('filterSearch').addEventListener('input', e => {
     clearTimeout(searchTimer);
     const val = e.target.value;
-    searchTimer = setTimeout(() => { av.search = val; renderAllTransactions(container); }, 300);
+    searchTimer = setTimeout(() => { av.search = val; av.visibleCount = 150; renderAllTransactions(container); }, 300);
   });
 
   container.querySelectorAll('[data-txn-id]').forEach(row => {
