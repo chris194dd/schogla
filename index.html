@@ -1,144 +1,338 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Gemeinschaftskonto</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kontobuch – Gemeinschaftskonto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
 <style>
-:root {
-  color-scheme: light;
-  --bg: #f5f6f8;
-  --card: #ffffff;
-  --border: #e2e4e9;
-  --text: #1c1e21;
-  --muted: #6b7280;
-  --primary: #2f6f4f;
-  --primary-dark: #235939;
-  --danger: #b3261e;
-  --expense: #c2542f;
-  --income: #2f6f4f;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); }
-.hidden { display: none !important; }
-.muted { color: var(--muted); font-size: 0.9em; }
-.error-text { color: var(--danger); min-height: 1.2em; font-size: 0.9em; }
-.login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
-.login-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 32px; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px; }
-.login-card h1 { margin: 0; font-size: 1.4em; }
-.login-card label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9em; }
-.login-card input { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1em; }
-button { cursor: pointer; font-family: inherit; }
-.login-card button[type="submit"] { margin-top: 8px; padding: 10px 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1em; }
-.login-card button[type="submit"]:hover { background: var(--primary-dark); }
-.app { min-height: 100vh; display: flex; flex-direction: column; }
-.topbar { display: flex; align-items: center; gap: 24px; padding: 12px 24px; background: var(--card); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-.brand { font-weight: 700; }
-.tabs { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
-.tab-btn { background: none; border: none; padding: 8px 14px; border-radius: 8px; font-size: 0.95em; color: var(--muted); }
-.tab-btn:hover { background: var(--bg); }
-.tab-btn.active { background: var(--primary); color: white; }
-.topbar-right { display: flex; align-items: center; gap: 12px; }
-.link-btn { background: none; border: none; color: var(--muted); text-decoration: underline; font-size: 0.9em; }
-.view-root { padding: 24px; max-width: 1100px; margin: 0 auto; width: 100%; }
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-.card h2 { margin-top: 0; font-size: 1.1em; }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 700px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
-.stat { text-align: left; }
-.stat .label { font-size: 0.85em; color: var(--muted); }
-.stat .value { font-size: 1.6em; font-weight: 700; margin-top: 4px; }
-.stat .value.expense { color: var(--expense); }
-.stat .value.income { color: var(--income); }
-table { width: 100%; border-collapse: collapse; font-size: 0.92em; }
-th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
-th { color: var(--muted); font-weight: 600; font-size: 0.85em; text-transform: uppercase; }
-tr:hover td { background: #fafafa; }
-.amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.amount.negative { color: var(--expense); }
-.amount.positive { color: var(--income); }
-select, input[type="text"], input[type="search"], input[type="month"], input[type="file"] { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.92em; font-family: inherit; }
-.btn { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); font-size: 0.9em; }
-.btn:hover { background: var(--bg); }
-.btn-primary { background: var(--primary); border-color: var(--primary); color: white; }
-.btn-primary:hover { background: var(--primary-dark); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-danger { color: var(--danger); }
-.toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--bg); font-size: 0.8em; border: 1px solid var(--border); }
-.badge.uncategorized { background: #fdecea; color: var(--danger); border-color: #f5c6c2; }
-.dropzone { border: 2px dashed var(--border); border-radius: 12px; padding: 32px; text-align: center; color: var(--muted); cursor: pointer; }
-.dropzone.dragover { border-color: var(--primary); background: #f0f7f3; }
-.chart-wrap { position: relative; height: 320px; }
-.empty-state { text-align: center; color: var(--muted); padding: 40px 20px; }
-.toast { position: fixed; bottom: 20px; right: 20px; background: #1c1e21; color: white; padding: 12px 18px; border-radius: 8px; font-size: 0.9em; z-index: 100; }
+  /* ======================================================================
+     DESIGN TOKENS
+     ====================================================================== */
+  :root{
+    --bg:#F5F7F4;
+    --surface:#FFFFFF;
+    --surface-alt:#F0F2ED;
+    --border:#DFE3DB;
+    --border-strong:#C7CCC1;
+    --text:#1B231E;
+    --text-muted:#66716A;
+    --text-faint:#96A092;
+
+    --income:#1F7A54;
+    --income-bg:#E1F2E8;
+    --expense:#B5432B;
+    --expense-bg:#F9E4DE;
+    --primary:#233E36;
+    --primary-hover:#152D26;
+    --amber:#B08900;
+    --amber-bg:#F6EFD8;
+
+    --radius-sm:6px;
+    --radius-md:10px;
+    --radius-lg:16px;
+    --shadow-sm:0 1px 2px rgba(27,35,30,0.06);
+    --shadow-md:0 6px 20px rgba(27,35,30,0.08);
+
+    --font-display:'Space Grotesk', 'Inter', sans-serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    font-size:15px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:var(--font-display); margin:0; letter-spacing:-0.01em;}
+  button, input, select, textarea{font-family:inherit; font-size:inherit; color:inherit;}
+  table{border-collapse:collapse; width:100%;}
+  .num{font-variant-numeric:tabular-nums;}
+  a{color:inherit;}
+
+  /* ======================================================================
+     LOGIN SCREEN
+     ====================================================================== */
+  .login-screen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px; background:
+      radial-gradient(circle at 20% 20%, #E7EEE4 0%, transparent 55%),
+      radial-gradient(circle at 85% 80%, #EAF1E6 0%, transparent 55%),
+      var(--bg);
+  }
+  .login-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-md); padding:40px 36px; width:100%; max-width:380px;
+  }
+  .login-brand{display:flex; align-items:center; gap:12px; margin-bottom:4px;}
+  .login-mark{
+    width:40px; height:40px; border-radius:10px; background:var(--primary); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-family:var(--font-display);
+    font-weight:700; font-size:19px;
+  }
+  .login-brand h1{font-size:22px; font-weight:700;}
+  .login-sub{color:var(--text-muted); margin:2px 0 28px 0; font-size:14px;}
+  #loginForm label{display:block; font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:14px;}
+  #loginForm input{
+    display:block; width:100%; margin-top:6px; padding:10px 12px; border:1px solid var(--border-strong);
+    border-radius:var(--radius-sm); background:var(--bg);
+  }
+  #loginForm input:focus{outline:2px solid var(--primary); outline-offset:1px; background:#fff;}
+  .login-error{color:var(--expense); font-size:13px; margin:4px 0 0 0;}
+
+  /* ======================================================================
+     BUTTONS / FORM CONTROLS
+     ====================================================================== */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    padding:9px 16px; border-radius:var(--radius-sm); border:1px solid transparent;
+    font-weight:600; font-size:14px; cursor:pointer; transition:background .15s, border-color .15s;
+    white-space:nowrap;
+  }
+  .btn-primary{background:var(--primary); color:#fff;}
+  .btn-primary:hover{background:var(--primary-hover);}
+  .btn-secondary{background:var(--surface); border-color:var(--border-strong); color:var(--text);}
+  .btn-secondary:hover{background:var(--surface-alt);}
+  .btn-ghost{background:transparent; border-color:var(--border); color:var(--text-muted);}
+  .btn-ghost:hover{background:var(--surface-alt); color:var(--text);}
+  .btn-danger{background:transparent; color:var(--expense); border-color:var(--expense-bg);}
+  .btn-danger:hover{background:var(--expense-bg);}
+  .btn-sm{padding:5px 10px; font-size:12.5px;}
+  .btn-block{width:100%;}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+
+  select, .input{
+    padding:8px 10px; border:1px solid var(--border-strong); border-radius:var(--radius-sm);
+    background:#fff;
+  }
+  select:focus, .input:focus{outline:2px solid var(--primary); outline-offset:1px;}
+  label.field{display:flex; flex-direction:column; gap:5px; font-size:13px; font-weight:600; color:var(--text-muted);}
+
+  /* ======================================================================
+     APP SHELL
+     ====================================================================== */
+  .app-root{min-height:100vh; display:flex; flex-direction:column;}
+  .app-header{
+    display:flex; align-items:center; gap:24px; padding:12px 24px; background:var(--surface);
+    border-bottom:1px solid var(--border); position:sticky; top:0; z-index:20; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:10px; margin-right:8px;}
+  .brand-mark{
+    width:30px; height:30px; border-radius:8px; background:var(--primary); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-family:var(--font-display);
+    font-weight:700; font-size:15px;
+  }
+  .brand-name{font-family:var(--font-display); font-weight:700; font-size:17px;}
+  .tabs{display:flex; gap:4px; overflow-x:auto; flex:1;}
+  .tab-btn{
+    background:transparent; border:none; padding:8px 14px; border-radius:var(--radius-sm);
+    font-weight:600; font-size:14px; color:var(--text-muted); cursor:pointer; white-space:nowrap;
+  }
+  .tab-btn:hover{background:var(--surface-alt); color:var(--text);}
+  .tab-btn.active{background:var(--primary); color:#fff;}
+  .header-user{display:flex; align-items:center; gap:10px; margin-left:auto;}
+  .role-badge{font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px;}
+  .role-admin{background:var(--income-bg); color:var(--income);}
+  .role-viewer{background:var(--amber-bg); color:var(--amber);}
+
+  .view-container{padding:24px; max-width:1200px; width:100%; margin:0 auto; flex:1;}
+  .view-header{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:18px; flex-wrap:wrap;}
+  .view-header h2{font-size:21px;}
+  .view-sub{color:var(--text-muted); font-size:13.5px;}
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+    padding:20px; box-shadow:var(--shadow-sm);
+  }
+  .card + .card{margin-top:16px;}
+  .card h3{font-size:15px; margin-bottom:14px;}
+
+  /* ======================================================================
+     GRIDS / RESPONSIVE
+     ====================================================================== */
+  .grid-2{display:grid; grid-template-columns:2fr 1fr; gap:16px;}
+  .stat-cards{display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-bottom:16px;}
+  .dashboard-controls{display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:14px; align-items:end;}
+  @media (max-width:700px){
+    .grid-2, .stat-cards, .dashboard-controls{grid-template-columns:1fr;}
+    .app-header{padding:10px 14px;}
+    .view-container{padding:14px;}
+  }
+
+  /* ======================================================================
+     STAT CARDS / BADGES
+     ====================================================================== */
+  .stat-card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:18px 20px;}
+  .stat-card .label{font-size:12.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em;}
+  .stat-card .value{font-family:var(--font-display); font-size:26px; font-weight:700; margin-top:6px;}
+  .stat-card.income .value{color:var(--income);}
+  .stat-card.expense .value{color:var(--expense);}
+  .stat-card .badge{margin-top:10px;}
+
+  .badge{display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:700;}
+  .badge-over{background:var(--expense-bg); color:var(--expense);}
+  .badge-under{background:var(--income-bg); color:var(--income);}
+  .badge-neutral{background:var(--surface-alt); color:var(--text-muted);}
+
+  .alert{
+    display:flex; align-items:center; gap:10px; background:var(--amber-bg); color:#7A5F00;
+    border-radius:var(--radius-md); padding:12px 16px; font-size:13.5px; font-weight:600; margin-bottom:16px;
+  }
+  .alert a{text-decoration:underline; cursor:pointer;}
+
+  /* ======================================================================
+     CHARTS
+     ====================================================================== */
+  .chart-wrap{position:relative; height:300px; margin-top:6px;}
+  .chart-note{font-size:12px; color:var(--text-faint); margin-top:8px;}
+
+  /* ======================================================================
+     TABLES / LISTS
+     ====================================================================== */
+  .data-table{font-size:13.5px;}
+  .data-table th{
+    text-align:left; padding:8px 10px; border-bottom:1px solid var(--border);
+    color:var(--text-muted); font-size:12px; text-transform:uppercase; letter-spacing:.03em; font-weight:700;
+  }
+  .data-table td{padding:9px 10px; border-bottom:1px solid var(--border);}
+  .data-table tr:last-child td{border-bottom:none;}
+  .cat-dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;}
+  .amount{font-weight:700;}
+  .amount.pos{color:var(--income);}
+  .amount.neg{color:var(--expense);}
+
+  .txn-list{display:flex; flex-direction:column; gap:8px;}
+  .txn-row{
+    display:grid; grid-template-columns:90px 1fr 110px 190px 32px; gap:12px; align-items:center;
+    padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface);
+  }
+  .txn-row.compact{grid-template-columns:90px 1fr 110px;}
+  .txn-row .desc{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .txn-row .date{color:var(--text-muted); font-size:13px;}
+  @media (max-width:700px){
+    .txn-row{grid-template-columns:1fr; gap:6px;}
+    .txn-row .amount{justify-self:start;}
+  }
+
+  .raw-details{margin-top:6px; grid-column:1/-1;}
+  .raw-details summary{cursor:pointer; color:var(--text-faint); font-size:12px; font-weight:600; user-select:none;}
+  .raw-details summary:hover{color:var(--text-muted);}
+  .raw-list{display:grid; grid-template-columns:max-content 1fr; gap:3px 14px; margin:8px 0 0 0; font-size:12.5px;}
+  .raw-list dt{color:var(--text-muted); font-weight:600;}
+  .raw-list dd{margin:0; color:var(--text);}
+
+  .row-actions{display:flex; align-items:center; gap:6px;}
+  .checkbox-cell{width:28px;}
+
+  .status-flag{font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px;}
+  .status-ok{background:var(--income-bg); color:var(--income);}
+  .status-duplicate{background:var(--surface-alt); color:var(--text-muted);}
+  .status-pending{background:var(--amber-bg); color:var(--amber);}
+
+  .empty-state{text-align:center; padding:40px 20px; color:var(--text-muted);}
+  .empty-state .big{font-size:34px; margin-bottom:8px;}
+
+  /* ======================================================================
+     IMPORT VIEW
+     ====================================================================== */
+  .dropzone{
+    border:2px dashed var(--border-strong); border-radius:var(--radius-lg); padding:32px;
+    text-align:center; color:var(--text-muted); cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  .dropzone.drag{border-color:var(--primary); background:var(--surface-alt);}
+  .dropzone .big{font-size:28px; margin-bottom:6px;}
+  .import-paste{margin-top:14px;}
+  .import-paste textarea{
+    width:100%; min-height:90px; border:1px solid var(--border-strong); border-radius:var(--radius-sm);
+    padding:10px; resize:vertical; font-family:ui-monospace, monospace; font-size:12.5px;
+  }
+  .mapping-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:12px;}
+  .import-summary{display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin:14px 0; font-size:13.5px;}
+  .import-summary strong{font-family:var(--font-display);}
+  .rule-inline{display:flex; align-items:center; gap:6px; margin-top:4px; font-size:12px; color:var(--text-muted);}
+  .rule-inline input[type="text"]{padding:4px 7px; font-size:12px; border:1px solid var(--border-strong); border-radius:5px; width:120px;}
+
+  /* ======================================================================
+     TOASTS
+     ====================================================================== */
+  .toast-container{position:fixed; bottom:20px; right:20px; z-index:100; display:flex; flex-direction:column; gap:8px;}
+  .toast{
+    background:var(--text); color:#fff; padding:12px 16px; border-radius:var(--radius-sm); font-size:13.5px;
+    font-weight:600; box-shadow:var(--shadow-md); opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s;
+    border-left:4px solid var(--text-faint); max-width:320px;
+  }
+  .toast.show{opacity:1; transform:translateY(0);}
+  .toast-success{border-left-color:var(--income);}
+  .toast-error{border-left-color:var(--expense);}
+  .toast-info{border-left-color:var(--amber);}
+
+  .loading-state{padding:60px 20px; text-align:center; color:var(--text-muted);}
 </style>
 </head>
 <body>
 
-<div id="login-screen" class="login-screen">
-  <form id="login-form" class="login-card">
-    <h1>Gemeinschaftskonto</h1>
-    <p class="muted">Bitte melde dich an.</p>
-    <label>E-Mail
-      <input type="email" id="login-email" required autocomplete="username" />
-    </label>
-    <label>Passwort
-      <input type="password" id="login-password" required autocomplete="current-password" />
-    </label>
-    <button type="submit">Anmelden</button>
-    <p id="login-error" class="error-text"></p>
-  </form>
-</div>
+  <div id="toastContainer" class="toast-container"></div>
 
-<div id="app" class="app hidden">
-  <header class="topbar">
-    <div class="brand">Gemeinschaftskonto</div>
-    <nav class="tabs">
-      <button data-view="dashboard" class="tab-btn">Übersicht</button>
-      <button data-view="import" class="tab-btn">Import</button>
-      <button data-view="categorize" class="tab-btn">Kategorisieren</button>
-      <button data-view="transactions" class="tab-btn">Alle Buchungen</button>
-    </nav>
-    <div class="topbar-right">
-      <span id="user-email" class="muted"></span>
-      <button id="logout-btn" class="link-btn">Abmelden</button>
+  <!-- ========================================================================
+       LOGIN SCREEN
+       ======================================================================== -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="login-brand">
+        <span class="login-mark">K</span>
+        <h1>Kontobuch</h1>
+      </div>
+      <p class="login-sub">Gemeinschaftskonto-Übersicht</p>
+      <form id="loginForm" novalidate>
+        <label>E-Mail
+          <input type="email" id="loginEmail" required autocomplete="username">
+        </label>
+        <label>Passwort
+          <input type="password" id="loginPassword" required autocomplete="current-password">
+        </label>
+        <button type="submit" class="btn btn-primary btn-block">Anmelden</button>
+        <p id="loginError" class="login-error" hidden></p>
+      </form>
     </div>
-  </header>
+  </div>
 
-  <main id="view-root" class="view-root"></main>
-</div>
+  <!-- ========================================================================
+       APP SHELL
+       ======================================================================== -->
+  <div id="appRoot" class="app-root" hidden>
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark">K</span>
+        <span class="brand-name">Kontobuch</span>
+      </div>
+      <nav class="tabs" id="tabs">
+        <button class="tab-btn" data-tab="dashboard">Übersicht</button>
+        <button class="tab-btn" data-tab="import" data-admin-only>Import</button>
+        <button class="tab-btn" data-tab="categorize" data-admin-only>Kategorisieren</button>
+        <button class="tab-btn" data-tab="all">Alle Buchungen</button>
+      </nav>
+      <div class="header-user">
+        <span id="userRoleBadge" class="role-badge"></span>
+        <button id="logoutBtn" class="btn btn-ghost btn-sm">Abmelden</button>
+      </div>
+    </header>
+    <main id="viewContainer" class="view-container">
+      <div class="loading-state">Daten werden geladen …</div>
+    </main>
+  </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut,
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import {
-  getFirestore,
-  collection,
-  onSnapshot,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  writeBatch,
-  serverTimestamp,
-  query,
-  orderBy,
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-/* ============================================================
-   1) KONFIGURATION
-   Trage hier die Config deines Firebase-Projekts ein
-   (Firebase Console -> Projekteinstellungen -> Meine Apps -> Web-App).
-   ============================================================ */
+/* ========================================================================
+   KONFIGURATION
+   ======================================================================== */
 const firebaseConfig = {
   apiKey: "AIzaSyC17MigpapcSFzDWsLwp2Ax74j8hgQGytw",
   authDomain: "skabatical-budgetplaner.firebaseapp.com",
@@ -148,1072 +342,1288 @@ const firebaseConfig = {
   appId: "1:241961422579:web:2da5d0e3e83b321d223186",
 };
 
-// Eigene, mit "kontoapp_" prefixte Collection-Namen, damit nichts mit den
-// Daten der beiden bestehenden Artefakt-Apps im selben Firebase-Projekt
-// kollidiert.
-const TX_COLLECTION = "kontoapp_transactions";
-const RULES_COLLECTION = "kontoapp_rules";
+// Zwei fest zugelassene Accounts. Rollen werden rein über die UID bestimmt.
+const ADMIN_UID = 'RBqwudtIIfdFGWrANV6s2RhhiGo2';   // Chris – Vollzugriff
+const VIEWER_UID = 'GqpoSXXsnFUqnlUNPWKEuDfHymB2';  // Freundin – nur Lesezugriff
+
+// Eigene, klar geprefixte Collections, damit nichts mit anderen Apps im selben
+// Firebase-Projekt (Budgio, Depot) kollidiert.
+const TRANSACTIONS_COLLECTION = 'kontoapp_transactions';
+const RULES_COLLECTION = 'kontoapp_rules';
 
 const CATEGORIES = [
-  "Essen + Trinken",
-  "Gastronomie / Freizeit",
-  "Wohnung",
-  "Einkünfte",
-  "Urlaub",
-  "Auto",
-  "Hund",
-  "nicht klassifiziert",
+  'Essen + Trinken',
+  'Gastronomie / Freizeit',
+  'Wohnung',
+  'Einkünfte',
+  'Urlaub',
+  'Auto',
+  'Hund',
+  'nicht klassifiziert',
 ];
-const UNCATEGORIZED = "nicht klassifiziert";
-const INCOME_CATEGORY = "Einkünfte";
+const DEFAULT_CATEGORY = 'nicht klassifiziert';
+const INCOME_CATEGORY = 'Einkünfte';
 
-// Admin (darf importieren/kategorisieren/löschen) vs. reiner Betrachter.
-const ADMIN_UID = "RBqwudtIIfdFGWrANV6s2RhhiGo2";
+const CATEGORY_COLORS = {
+  'Essen + Trinken': '#8A6D3B',
+  'Gastronomie / Freizeit': '#B5432B',
+  'Wohnung': '#3A5C82',
+  'Einkünfte': '#1F7A54',
+  'Urlaub': '#6E4C9E',
+  'Auto': '#5A5F66',
+  'Hund': '#B08900',
+  'nicht klassifiziert': '#9AA098',
+};
 
-/* ============================================================
-   2) FIREBASE INIT
-   ============================================================ */
+/* ========================================================================
+   FIREBASE-INIT
+   ======================================================================== */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+  query, orderBy, onSnapshot, writeBatch, serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 
-/* ============================================================
-   3) CSV-PARSER (für Bank-Exporte, z.B. DKB)
-   ============================================================ */
-function parseLine(line, delimiter) {
-  const cells = [];
-  let cur = "";
+/* ========================================================================
+   ZUSTAND / STORE
+   ======================================================================== */
+const store = {
+  transactions: [],       // aus kontoapp_transactions, live synchronisiert
+  rules: [],               // aus kontoapp_rules, live synchronisiert
+  transactionsLoaded: false,
+  rulesLoaded: false,
+};
+
+const state = {
+  role: null,               // 'admin' | 'viewer'
+  currentTab: 'dashboard',
+  initialRenderDone: false,
+  dashboard: {
+    mode: 'month',          // 'month' | 'range'
+    month: currentMonthKey(),
+    from: firstDayOfCurrentMonth(),
+    to: todayIso(),
+    category: 'all',
+  },
+  categorizeSelection: new Set(),
+  allView: {
+    month: 'all',
+    category: 'all',
+    search: '',
+    selection: new Set(),
+  },
+  importState: emptyImportState(),
+};
+
+function emptyImportState(){
+  return {
+    parseResult: null,      // { headerCells, colMap, rows, delimiter, headerIdx }
+    manualMapping: null,    // Override von colMap
+    previewRows: [],        // [{candidate, hash, statusFlag, category, include, saveRule, ruleKeyword}]
+    dirty: false,
+    fileName: '',
+  };
+}
+
+/* ========================================================================
+   HILFSFUNKTIONEN
+   ======================================================================== */
+function esc(str){
+  return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function chunkArray(arr, size){
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+const currencyFormatter = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+function formatCurrency(n){ return currencyFormatter.format(n || 0); }
+
+function formatDateDisplay(iso){
+  if (!iso) return '–';
+  const [y, m, d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+function currentMonthKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+function firstDayOfCurrentMonth(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+function todayIso(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function lastDayOfMonth(monthKey){
+  const [y, m] = monthKey.split('-').map(Number);
+  const d = new Date(y, m, 0);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function monthKeysBetween(from, to){
+  const keys = [];
+  let [y, m] = from.split('-').map(Number);
+  const [ey, em] = to.split('-').map(Number);
+  let guard = 0;
+  while ((y < ey || (y === ey && m <= em)) && guard < 600){
+    keys.push(`${y}-${String(m).padStart(2, '0')}`);
+    m++; if (m > 12){ m = 1; y++; }
+    guard++;
+  }
+  return keys;
+}
+function monthLabel(mk){
+  const [y, m] = mk.split('-').map(Number);
+  const d = new Date(y, m - 1, 1);
+  return d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+}
+function monthLabelShort(mk){
+  const [y, m] = mk.split('-').map(Number);
+  const d = new Date(y, m - 1, 1);
+  return d.toLocaleDateString('de-DE', { month: 'short', year: '2-digit' });
+}
+function getAllMonthKeys(transactions){
+  const set = new Set(transactions.map(t => t.date.slice(0, 7)));
+  return Array.from(set).sort();
+}
+
+function categoryOptions(selected){
+  return CATEGORIES.map(c => `<option value="${esc(c)}" ${c === selected ? 'selected' : ''}>${esc(c)}</option>`).join('');
+}
+function categoryDot(cat){
+  return `<span class="cat-dot" style="background:${CATEGORY_COLORS[cat] || '#999'}"></span>`;
+}
+
+function showToast(message, type = 'info'){
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = message;
+  container.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, 4200);
+}
+
+function renderRawDetails(raw, excludeKeys){
+  const exclude = new Set(excludeKeys || []);
+  const entries = Object.entries(raw || {}).filter(([k, v]) => !exclude.has(k) && v !== '' && v != null);
+  if (!entries.length) return '';
+  return `<details class="raw-details"><summary>Details</summary><dl class="raw-list">${
+    entries.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')
+  }</dl></details>`;
+}
+
+/* ========================================================================
+   CSV-PARSER (DKB-Umsatzexport & ähnliche Formate)
+   ======================================================================== */
+function parseCsvLine(line, delimiter){
+  const result = [];
+  let cur = '';
   let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
+  for (let i = 0; i < line.length; i++){
     const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (line[i + 1] === '"') { cur += '"'; i++; }
+    if (inQuotes){
+      if (ch === '"'){
+        if (line[i + 1] === '"'){ cur += '"'; i++; }
         else { inQuotes = false; }
-      } else { cur += ch; }
+      } else {
+        cur += ch;
+      }
     } else {
-      if (ch === '"') { inQuotes = true; }
-      else if (ch === delimiter) { cells.push(cur); cur = ""; }
+      if (ch === '"'){ inQuotes = true; }
+      else if (ch === delimiter){ result.push(cur); cur = ''; }
       else { cur += ch; }
     }
   }
-  cells.push(cur);
-  return cells.map((c) => c.trim());
+  result.push(cur);
+  return result.map(s => s.trim());
 }
 
-function detectDelimiter(line) {
-  const semi = (line.match(/;/g) || []).length;
-  const comma = (line.match(/,/g) || []).length;
-  return semi >= comma ? ";" : ",";
+function detectDelimiter(lines){
+  let semi = 0, comma = 0;
+  for (const line of lines.slice(0, 30)){
+    semi += (line.match(/;/g) || []).length;
+    comma += (line.match(/,/g) || []).length;
+  }
+  return semi >= comma ? ';' : ',';
 }
 
-function detectHeaderRow(lines, delimiter) {
-  for (let i = 0; i < Math.min(lines.length, 25); i++) {
-    const cells = parseLine(lines[i], delimiter).map((c) => c.toLowerCase());
-    const hasDate = cells.some((c) => c.includes("datum"));
-    const hasAmount = cells.some((c) => c.includes("betrag"));
-    if (hasDate && hasAmount) return i;
+function findHeaderRowIndex(lines, delimiter){
+  for (let i = 0; i < Math.min(lines.length, 25); i++){
+    const cells = parseCsvLine(lines[i], delimiter).map(c => c.toLowerCase());
+    const joined = cells.join(' ');
+    if (joined.includes('datum') && joined.includes('betrag')) return i;
   }
   return 0;
 }
 
-function guessColumn(headers, patterns) {
-  const lower = headers.map((h) => h.toLowerCase());
-  for (const p of patterns) {
-    const idx = lower.findIndex((h) => h.includes(p));
-    if (idx !== -1) return idx;
-  }
-  return -1;
-}
-
-function analyzeCsv(rawText) {
-  const text = rawText.replace(/^﻿/, "").replace(/\r\n/g, "\n");
-  const lines = text.split("\n").filter((l) => l.trim().length > 0);
-  if (lines.length === 0) return { error: "Die Datei enthält keine Zeilen." };
-
-  const delimiter = detectDelimiter(lines[Math.min(4, lines.length - 1)]);
-  const headerRowIndex = detectHeaderRow(lines, delimiter);
-  const headers = parseLine(lines[headerRowIndex], delimiter);
-  const dataLines = lines.slice(headerRowIndex + 1);
-  const rows = dataLines.map((l) => parseLine(l, delimiter));
-
-  const dateCol = guessColumn(headers, ["buchungsdatum", "datum"]);
-  const amountCol = guessColumn(headers, ["betrag"]);
-  const payeeCol = guessColumn(headers, ["zahlungsempfänger", "zahlungsempfaenger", "empfänger", "name"]);
-  const purposeCol = guessColumn(headers, ["verwendungszweck", "buchungstext"]);
-  const statusCol = guessColumn(headers, ["status"]);
-
+function autoMapColumns(headerCells){
+  const lower = headerCells.map(h => h.toLowerCase());
+  const findIdx = (pred) => {
+    const i = lower.findIndex(pred);
+    return i === -1 ? null : i;
+  };
   return {
-    delimiter,
-    headerRowIndex,
-    headers,
-    rows,
-    guess: {
-      dateCol,
-      amountCol,
-      descriptionCols: [payeeCol, purposeCol].filter((c) => c !== -1),
-      statusCol,
-    },
+    date: findIdx(h => h.includes('buchungsdatum')) ?? findIdx(h => h.includes('datum')),
+    amount: findIdx(h => h.includes('betrag')),
+    recipient: findIdx(h => h.includes('zahlungsempfänger') || h.includes('zahlungsempfaenger')),
+    payer: findIdx(h => h.includes('zahlungspflichtige')),
+    purpose: findIdx(h => h.includes('verwendungszweck')),
+    status: findIdx(h => h.includes('status')),
   };
 }
 
-// Baut aus einer Rohzeile ein Objekt {Spaltenname: Wert} für alle Spalten -
-// damit geht beim Import nichts verloren, auch wenn nur ein Teil der
-// Felder in der App direkt angezeigt wird.
-function buildRawObject(headers, row) {
-  const obj = {};
-  headers.forEach((h, i) => {
-    const key = (h || `spalte_${i + 1}`).trim();
-    if (!key) return;
-    obj[key] = row[i] !== undefined ? row[i] : "";
-  });
-  return obj;
+function parseBankCsv(text){
+  const rawLines = text.split(/\r\n|\r|\n/).filter(l => l.trim().length > 0);
+  if (!rawLines.length) throw new Error('Datei enthält keine Daten.');
+  const delimiter = detectDelimiter(rawLines);
+  const headerIdx = findHeaderRowIndex(rawLines, delimiter);
+  const headerCells = parseCsvLine(rawLines[headerIdx], delimiter);
+  const colMap = autoMapColumns(headerCells);
+  const dataLines = rawLines.slice(headerIdx + 1);
+  const rows = [];
+  for (const line of dataLines){
+    const cells = parseCsvLine(line, delimiter);
+    if (cells.length < 2) continue;
+    const raw = {};
+    headerCells.forEach((h, i) => { raw[h || `Spalte ${i + 1}`] = cells[i] ?? ''; });
+    rows.push({ raw, cells, lineText: line });
+  }
+  return { headerCells, colMap, rows, delimiter, headerIdx };
 }
 
-function parseGermanDate(str) {
+function parseGermanDate(str){
   if (!str) return null;
-  const s = str.trim();
-  let m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (m) { const [, d, mo, y] = m; return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`; }
-  m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})$/);
-  if (m) { const [, d, mo, y] = m; const year = 2000 + parseInt(y, 10); return `${year}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`; }
-  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (m) { const [, y, mo, d] = m; return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`; }
-  return null;
+  const m = str.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+  if (!m) return null;
+  let [, d, mo, y] = m;
+  if (y.length === 2) y = (parseInt(y, 10) <= 79 ? '20' : '19') + y;
+  d = d.padStart(2, '0'); mo = mo.padStart(2, '0');
+  return `${y}-${mo}-${d}`;
 }
 
-function parseGermanAmount(str) {
-  if (str === null || str === undefined) return NaN;
-  let s = String(str).trim().replace(/[€\s]/g, "");
-  if (s === "") return NaN;
-  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+function parseGermanAmount(str){
+  if (str == null || str === '') return NaN;
+  let s = String(str).trim().replace(/[^\d,.-]/g, '');
+  s = s.replace(/\./g, '').replace(',', '.');
   return parseFloat(s);
 }
 
-function buildDescription(row, cols) {
-  return cols.map((c) => row[c]).filter((v) => v && v.trim().length > 0).join(" — ");
+function buildDescription(recipient, payer, purpose){
+  const name = (recipient || payer || '').trim();
+  const parts = [];
+  if (name) parts.push(name);
+  if (purpose && purpose.trim() && purpose.trim() !== name) parts.push(purpose.trim());
+  const joined = parts.join(' — ').trim();
+  return joined || '(ohne Beschreibung)';
 }
 
-async function hashTransaction(date, amount, rawRow) {
-  const input = `${date}|${amount}|${rawRow.join("|")}`;
-  const enc = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 24);
+function buildCandidate(row, colMap, headerCells){
+  const cells = row.cells;
+  const at = (idx) => (idx != null && idx >= 0 && idx < cells.length) ? cells[idx] : '';
+  const dateRaw = at(colMap.date);
+  const amountRaw = at(colMap.amount);
+  const status = at(colMap.status);
+  const recipient = at(colMap.recipient);
+  const payer = at(colMap.payer);
+  const purpose = at(colMap.purpose);
+  const isoDate = parseGermanDate(dateRaw);
+  const amount = parseGermanAmount(amountRaw);
+  const description = buildDescription(recipient, payer, purpose);
+  const usedKeys = [colMap.date, colMap.amount, colMap.recipient, colMap.payer, colMap.purpose]
+    .filter(i => i != null && i >= 0)
+    .map(i => headerCells[i] || `Spalte ${i + 1}`);
+  return { isoDate, amount, description, status, raw: row.raw, usedKeys };
 }
 
-/* ============================================================
-   4) DATENSPEICHER (Firestore, live synchron)
-   ============================================================ */
-const listeners = new Set();
-let transactions = [];
-let rules = [];
-let unsubTx = null;
-let unsubRules = null;
+async function computeHash(isoDate, amount, lineText){
+  const data = new TextEncoder().encode(`${isoDate}|${amount}|${lineText}`);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
-function notify() { for (const fn of listeners) fn(); }
-
-const store = {
-  get transactions() { return transactions; },
-  get rules() { return rules; },
-  subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
-  start() {
-    if (unsubTx) return;
-    const txQuery = query(collection(db, TX_COLLECTION), orderBy("date", "desc"));
-    unsubTx = onSnapshot(txQuery, (snap) => {
-      transactions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      notify();
-    });
-    const rulesQuery = query(collection(db, RULES_COLLECTION));
-    unsubRules = onSnapshot(rulesQuery, (snap) => {
-      rules = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      notify();
-    });
-  },
-  stop() {
-    if (unsubTx) unsubTx();
-    if (unsubRules) unsubRules();
-    unsubTx = null; unsubRules = null;
-    transactions = []; rules = [];
-  },
-};
-
-function suggestCategory(description) {
+/* ========================================================================
+   REGELN (automatische Kategorisierung)
+   ======================================================================== */
+function matchCategory(description){
   const lower = description.toLowerCase();
-  const hit = rules.find((r) => lower.includes(r.keyword.toLowerCase()));
-  return hit ? hit.category : UNCATEGORIZED;
-}
-
-async function importTransactions(newTxs) {
-  const existingHashes = new Set(transactions.map((t) => t.hash));
-  const toImport = newTxs.filter((t) => !existingHashes.has(t.hash));
-  const skipped = newTxs.length - toImport.length;
-  const CHUNK = 400;
-  for (let i = 0; i < toImport.length; i += CHUNK) {
-    const batch = writeBatch(db);
-    for (const tx of toImport.slice(i, i + CHUNK)) {
-      const ref = doc(collection(db, TX_COLLECTION));
-      batch.set(ref, { ...tx, createdAt: serverTimestamp() });
-    }
-    await batch.commit();
+  for (const rule of store.rules){
+    if (rule.keyword && lower.includes(rule.keyword)) return rule.category;
   }
-  return { imported: toImport.length, skipped };
+  return DEFAULT_CATEGORY;
 }
 
-async function updateTransactionCategory(id, category) {
-  await updateDoc(doc(db, TX_COLLECTION, id), { category });
-}
-async function updateTransactionsCategoryBulk(ids, category) {
-  const CHUNK = 400; // Firestore Batch-Limit ist 500 Schreibvorgänge
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    const batch = writeBatch(db);
-    for (const id of ids.slice(i, i + CHUNK)) {
-      batch.update(doc(db, TX_COLLECTION, id), { category });
+async function upsertRule(keyword, category){
+  const existing = store.rules.find(r => r.keyword === keyword);
+  if (existing){
+    if (existing.category !== category){
+      await updateDoc(doc(db, RULES_COLLECTION, existing.id), { category });
     }
-    await batch.commit();
+  } else {
+    await addDoc(collection(db, RULES_COLLECTION), { keyword, category, createdAt: serverTimestamp() });
   }
 }
-async function deleteTransaction(id) {
-  await deleteDoc(doc(db, TX_COLLECTION, id));
-}
-async function addRule(keyword, category) {
-  const lower = keyword.trim().toLowerCase();
-  if (!lower) return;
-  if (rules.some((r) => r.keyword.toLowerCase() === lower)) return;
-  await addDoc(collection(db, RULES_COLLECTION), { keyword: lower, category, createdAt: serverTimestamp() });
+
+/* ========================================================================
+   FIRESTORE: SCHREIBOPERATIONEN
+   ======================================================================== */
+async function setTransactionCategory(id, category){
+  try {
+    await updateDoc(doc(db, TRANSACTIONS_COLLECTION, id), { category });
+  } catch (err){
+    showToast('Fehler beim Aktualisieren: ' + err.message, 'error');
+  }
 }
 
-/* ============================================================
-   5) HILFSFUNKTIONEN
-   ============================================================ */
-function fmtEuro(n) {
-  return n.toLocaleString("de-DE", { style: "currency", currency: "EUR" });
-}
-function escapeHtml(str) {
-  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-// Klappbare Detailansicht mit allen ungenutzten Original-CSV-Feldern
-// (IBAN, Zahlungspflichtige*r, Mandatsreferenz, Status, ...), damit nichts
-// verloren geht, ohne die Tabellen zuzumüllen.
-function rawDetailsHtml(raw) {
-  if (!raw) return "";
-  const entries = Object.entries(raw).filter(([, v]) => v !== undefined && v !== null && String(v).trim() !== "");
-  if (entries.length === 0) return "";
-  return `<details style="margin-top:4px;">
-    <summary class="muted" style="cursor:pointer; font-size:0.8em;">Details</summary>
-    <div style="font-size:0.8em; margin-top:4px; display:grid; grid-template-columns:auto 1fr; gap:2px 10px;">
-      ${entries.map(([k, v]) => `<span class="muted">${escapeHtml(k)}</span><span>${escapeHtml(v)}</span>`).join("")}
-    </div>
-  </details>`;
-}
-function showToast(message) {
-  const el = document.createElement("div");
-  el.className = "toast";
-  el.textContent = message;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+async function deleteTransactionById(id){
+  if (!confirm('Diese Buchung wirklich löschen?')) return;
+  try {
+    await deleteDoc(doc(db, TRANSACTIONS_COLLECTION, id));
+    showToast('Buchung gelöscht.', 'success');
+  } catch (err){
+    showToast('Fehler beim Löschen: ' + err.message, 'error');
+  }
 }
 
-/* ============================================================
-   6) VIEW: ÜBERSICHT / DASHBOARD
-   ============================================================ */
-let categoryChart = null;
-let trendChart = null;
-let dashFilters = { mode: "month", month: "", from: "", to: "", category: "" };
-
-function currentMonthValue() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-function monthLabel(ym) {
-  const [y, m] = ym.split("-");
-  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
-}
-function allMonthsSorted() {
-  return Array.from(new Set(store.transactions.map((t) => t.date.slice(0, 7)))).sort();
+async function bulkAssignCategory(ids, category){
+  if (!ids.length){ showToast('Keine Buchungen ausgewählt.', 'error'); return; }
+  try {
+    for (const chunk of chunkArray(ids, 400)){
+      const batch = writeBatch(db);
+      chunk.forEach(id => batch.update(doc(db, TRANSACTIONS_COLLECTION, id), { category }));
+      await batch.commit();
+    }
+    showToast(`${ids.length} Buchung(en) als „${category}“ kategorisiert.`, 'success');
+  } catch (err){
+    showToast('Fehler bei der Sammelkategorisierung: ' + err.message, 'error');
+  }
 }
 
-// Durchschnittliche Ausgaben pro Kategorie/insgesamt über alle Monate mit
-// Daten. excludeMonth kann den gerade betrachteten Monat rausnehmen, damit
-// "dieser Monat vs. Durchschnitt der übrigen Monate" fair verglichen wird.
-function computeAverages(excludeMonth) {
-  const months = allMonthsSorted();
-  const pool = excludeMonth ? months.filter((m) => m !== excludeMonth) : months;
-  const numMonths = pool.length;
-  const perCategory = {};
-  CATEGORIES.forEach((cat) => {
-    if (numMonths === 0) { perCategory[cat] = null; return; }
-    const total = Math.abs(
-      store.transactions.filter((t) => pool.includes(t.date.slice(0, 7)) && t.category === cat).reduce((s, t) => s + t.amount, 0)
-    );
-    perCategory[cat] = total / numMonths;
+async function commitImport(){
+  const rowsToImport = state.importState.previewRows.filter(r => r.include);
+  if (!rowsToImport.length){
+    showToast('Keine Buchungen zum Importieren ausgewählt.', 'error');
+    return;
+  }
+  try {
+    for (const r of rowsToImport){
+      if (r.saveRule && r.ruleKeyword.trim()){
+        await upsertRule(r.ruleKeyword.trim().toLowerCase(), r.category);
+      }
+    }
+    let imported = 0;
+    for (const chunk of chunkArray(rowsToImport, 400)){
+      const batch = writeBatch(db);
+      for (const r of chunk){
+        const ref = doc(collection(db, TRANSACTIONS_COLLECTION));
+        batch.set(ref, {
+          date: r.candidate.isoDate,
+          description: r.candidate.description,
+          amount: r.candidate.amount,
+          category: r.category,
+          status: 'Gebucht',
+          hash: r.hash,
+          raw: r.candidate.raw,
+          usedKeys: r.candidate.usedKeys || [],
+          createdAt: serverTimestamp(),
+          importedAt: serverTimestamp(),
+        });
+        imported++;
+      }
+      await batch.commit();
+    }
+    const dupCount = state.importState.previewRows.filter(r => r.statusFlag === 'duplicate').length;
+    const pendingCount = state.importState.previewRows.filter(r => r.statusFlag === 'vorgemerkt').length;
+    showToast(`${imported} importiert, ${dupCount} Duplikate übersprungen, ${pendingCount} vorgemerkt übersprungen.`, 'success');
+    state.importState = emptyImportState();
+    renderCurrentView();
+  } catch (err){
+    console.error(err);
+    showToast('Import fehlgeschlagen: ' + err.message, 'error');
+  }
+}
+
+/* ========================================================================
+   FIRESTORE: LIVE-SYNCHRONISATION
+   ======================================================================== */
+function subscribeStore(){
+  const txQuery = query(collection(db, TRANSACTIONS_COLLECTION), orderBy('date', 'desc'));
+  onSnapshot(txQuery, snap => {
+    store.transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    store.transactionsLoaded = true;
+    maybeInitialRender();
+    onStoreChanged();
+  }, err => showToast('Fehler beim Laden der Buchungen: ' + err.message, 'error'));
+
+  const rulesQuery = query(collection(db, RULES_COLLECTION));
+  onSnapshot(rulesQuery, snap => {
+    store.rules = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    store.rulesLoaded = true;
+    maybeInitialRender();
+    onStoreChanged();
+  }, err => showToast('Fehler beim Laden der Regeln: ' + err.message, 'error'));
+}
+
+function maybeInitialRender(){
+  if (store.transactionsLoaded && store.rulesLoaded && !state.initialRenderDone){
+    state.initialRenderDone = true;
+    renderCurrentView();
+  }
+}
+
+function onStoreChanged(){
+  if (!state.initialRenderDone) return;
+  renderCurrentView();
+}
+
+/* ========================================================================
+   AUTH / ROLLEN
+   ======================================================================== */
+onAuthStateChanged(auth, user => {
+  if (user){
+    if (user.uid !== ADMIN_UID && user.uid !== VIEWER_UID){
+      showToast('Dieser Account ist nicht für Kontobuch freigeschaltet.', 'error');
+      signOut(auth);
+      return;
+    }
+    state.role = user.uid === ADMIN_UID ? 'admin' : 'viewer';
+    document.getElementById('loginScreen').hidden = true;
+    document.getElementById('appRoot').hidden = false;
+    setupRoleUI();
+    subscribeStore();
+  } else {
+    state.role = null;
+    state.initialRenderDone = false;
+    store.transactionsLoaded = false;
+    store.rulesLoaded = false;
+    document.getElementById('appRoot').hidden = true;
+    document.getElementById('loginScreen').hidden = false;
+  }
+});
+
+function setupRoleUI(){
+  document.querySelectorAll('[data-admin-only]').forEach(el => {
+    el.style.display = state.role === 'admin' ? '' : 'none';
   });
-  const totalExpense = numMonths === 0 ? null :
-    Math.abs(store.transactions.filter((t) => pool.includes(t.date.slice(0, 7)) && t.amount < 0).reduce((s, t) => s + t.amount, 0)) / numMonths;
-  return { perCategory, totalExpense, numMonths };
-}
-
-function comparisonBadgeHtml(actual, average) {
-  if (average === null || average === undefined || average === 0) {
-    return '<span class="muted">kein Vergleichswert (zu wenig Monatsdaten)</span>';
+  const badge = document.getElementById('userRoleBadge');
+  badge.textContent = state.role === 'admin' ? 'Admin' : 'Nur Lesen';
+  badge.className = 'role-badge ' + (state.role === 'admin' ? 'role-admin' : 'role-viewer');
+  if (state.role !== 'admin' && (state.currentTab === 'import' || state.currentTab === 'categorize')){
+    state.currentTab = 'dashboard';
   }
-  const diffPct = ((actual - average) / average) * 100;
-  const over = diffPct >= 0;
-  const cls = Math.abs(diffPct) < 5 ? "muted" : over ? "expense" : "income";
-  return `<span class="${cls}" style="font-weight:600;">${over ? "+" : ""}${diffPct.toFixed(0)}% ${over ? "über" : "unter"} Ø</span> <span class="muted">(Ø ${fmtEuro(average)})</span>`;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === state.currentTab));
 }
 
-function monthlyCategoryExpenses(category, months) {
-  return months.map((m) =>
-    Math.abs(store.transactions.filter((t) => t.date.startsWith(m) && t.category === category).reduce((s, t) => s + t.amount, 0))
-  );
-}
-
-function renderDashboard(root) {
-  const availableMonths = allMonthsSorted();
-  if (!dashFilters.month) {
-    dashFilters.month = availableMonths.includes(currentMonthValue())
-      ? currentMonthValue()
-      : availableMonths[availableMonths.length - 1] || currentMonthValue();
+document.getElementById('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.hidden = true;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (err){
+    errEl.textContent = 'Anmeldung fehlgeschlagen. Bitte E-Mail und Passwort prüfen.';
+    errEl.hidden = false;
   }
+});
+document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+document.getElementById('tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  switchTab(btn.dataset.tab);
+});
 
-  root.innerHTML = `
-    <div class="toolbar">
-      <label>Zeitraum
-        <select id="dash-mode">
-          <option value="month" ${dashFilters.mode === "month" ? "selected" : ""}>Monat</option>
-          <option value="range" ${dashFilters.mode === "range" ? "selected" : ""}>Zeitraum (von-bis)</option>
-        </select>
-      </label>
-      <span id="dash-period-inputs" style="display:flex; gap:12px;"></span>
-      <label>Kategorie
-        <select id="dash-category">
-          <option value="">Alle Kategorien</option>
-          ${CATEGORIES.map((c) => `<option value="${escapeHtml(c)}" ${dashFilters.category === c ? "selected" : ""}>${escapeHtml(c)}</option>`).join("")}
-        </select>
-      </label>
+function switchTab(tab){
+  if (tab === state.currentTab) return;
+  state.currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  renderCurrentView();
+}
+
+/* ========================================================================
+   APP-SHELL / ROUTER
+   ======================================================================== */
+function renderCurrentView(){
+  const container = document.getElementById('viewContainer');
+  if (state.currentTab === 'import' && state.importState.dirty){
+    // Ungespeicherte Import-Vorschau nicht durch Live-Updates wegrendern.
+    return;
+  }
+  switch (state.currentTab){
+    case 'dashboard': renderDashboard(container); break;
+    case 'import': renderImport(container); break;
+    case 'categorize': renderCategorize(container); break;
+    case 'all': renderAllTransactions(container); break;
+    default: renderDashboard(container);
+  }
+}
+
+/* ========================================================================
+   DASHBOARD: BERECHNUNGEN
+   ======================================================================== */
+function computeStats(transactions){
+  let income = 0, expense = 0, total = 0;
+  const byCategory = {};
+  for (const t of transactions){
+    total += t.amount;
+    if (t.category === INCOME_CATEGORY){
+      income += t.amount;
+      byCategory[t.category] = (byCategory[t.category] || 0) + t.amount;
+    } else {
+      expense += -t.amount;
+      byCategory[t.category] = (byCategory[t.category] || 0) + (-t.amount);
+    }
+  }
+  return { income, expense, saldo: total, byCategory };
+}
+
+function computeMonthlyAverages(transactions, comparisonMonthKeys){
+  const monthly = {};
+  for (const t of transactions){
+    const mk = t.date.slice(0, 7);
+    if (!comparisonMonthKeys.includes(mk)) continue;
+    if (!monthly[mk]) monthly[mk] = {};
+    const val = t.category === INCOME_CATEGORY ? t.amount : -t.amount;
+    monthly[mk][t.category] = (monthly[mk][t.category] || 0) + val;
+  }
+  const n = comparisonMonthKeys.length || 1;
+  const avgByCategory = {};
+  for (const cat of CATEGORIES){
+    let sum = 0;
+    for (const mk of comparisonMonthKeys) sum += (monthly[mk]?.[cat] || 0);
+    avgByCategory[cat] = sum / n;
+  }
+  let totalSum = 0;
+  for (const mk of comparisonMonthKeys){
+    const catsObj = monthly[mk] || {};
+    totalSum += Object.entries(catsObj).reduce((s, [cat, v]) => s + (cat === INCOME_CATEGORY ? 0 : v), 0);
+  }
+  return { avgByCategory, avgExpenseTotal: totalSum / n };
+}
+
+function computeOverallCategoryAverage(transactions, allMonthKeys, category){
+  if (!allMonthKeys.length) return 0;
+  let sum = 0;
+  for (const mk of allMonthKeys){
+    const val = transactions
+      .filter(t => t.date.slice(0, 7) === mk && t.category === category)
+      .reduce((s, t) => s + (category === INCOME_CATEGORY ? t.amount : -t.amount), 0);
+    sum += val;
+  }
+  return sum / allMonthKeys.length;
+}
+
+function computeBadge(periodValue, avgValue, monthsCount){
+  if (!avgValue){
+    return { label: periodValue ? 'kein Vergleich' : '–', cls: 'badge-neutral' };
+  }
+  const periodEquivalent = periodValue / (monthsCount || 1);
+  const pct = ((periodEquivalent - avgValue) / avgValue) * 100;
+  if (pct > 5) return { label: `+${pct.toFixed(0)}% über Ø`, cls: 'badge-over' };
+  if (pct < -5) return { label: `${pct.toFixed(0)}% unter Ø`, cls: 'badge-under' };
+  return { label: '≈ Ø', cls: 'badge-neutral' };
+}
+
+function computeDashboardData(){
+  const { mode, month, from, to, category } = state.dashboard;
+  const rangeFrom = mode === 'month' ? `${month}-01` : from;
+  const rangeTo = mode === 'month' ? lastDayOfMonth(month) : to;
+  const periodAll = store.transactions.filter(t => t.date >= rangeFrom && t.date <= rangeTo);
+  const periodMonthKeys = mode === 'month' ? [month] : monthKeysBetween(from, to);
+  const allMonthKeys = getAllMonthKeys(store.transactions);
+  const comparisonMonthKeys = allMonthKeys.filter(m => !periodMonthKeys.includes(m));
+
+  const stats = computeStats(periodAll);
+  const { avgByCategory, avgExpenseTotal } = computeMonthlyAverages(store.transactions, comparisonMonthKeys);
+  const periodMonthsCount = periodMonthKeys.length || 1;
+
+  const unclassifiedCount = periodAll.filter(t => t.category === DEFAULT_CATEGORY).length;
+
+  return {
+    periodAll, periodMonthKeys, allMonthKeys, comparisonMonthKeys,
+    stats, avgByCategory, avgExpenseTotal, periodMonthsCount,
+    unclassifiedCount, rangeFrom, rangeTo, category,
+  };
+}
+
+/* ========================================================================
+   DASHBOARD: RENDERING
+   ======================================================================== */
+let barChartInstance = null;
+let lineChartInstance = null;
+
+function renderDashboard(container){
+  const d = computeDashboardData();
+  const { mode, category } = state.dashboard;
+
+  const incomeBadge = computeBadge(d.stats.income, d.avgByCategory[INCOME_CATEGORY], d.periodMonthsCount);
+  const expenseBadge = computeBadge(d.stats.expense, d.avgExpenseTotal, d.periodMonthsCount);
+
+  const chartCategories = category === 'all' ? CATEGORIES.filter(c => c !== INCOME_CATEGORY) : [category];
+  const tableRows = chartCategories.map(cat => {
+    const periodValue = d.stats.byCategory[cat] || 0;
+    const avgValue = d.avgByCategory[cat] || 0;
+    const badge = computeBadge(periodValue, avgValue, d.periodMonthsCount);
+    return { cat, periodValue, avgValue, badge };
+  });
+
+  container.innerHTML = `
+    <div class="view-header">
+      <div>
+        <h2>Übersicht</h2>
+        <p class="view-sub">Einnahmen, Ausgaben und Verlauf eures Gemeinschaftskontos.</p>
+      </div>
     </div>
-    <div id="dash-content"></div>
+
+    <div class="card">
+      <div class="dashboard-controls">
+        <label class="field">Zeitraum
+          <select id="dashMode">
+            <option value="month" ${mode === 'month' ? 'selected' : ''}>Monat</option>
+            <option value="range" ${mode === 'range' ? 'selected' : ''}>Von–Bis</option>
+          </select>
+        </label>
+        ${mode === 'month' ? `
+          <label class="field">Monat
+            <input type="month" id="dashMonth" value="${esc(state.dashboard.month)}">
+          </label>
+        ` : `
+          <label class="field">Von
+            <input type="date" id="dashFrom" value="${esc(state.dashboard.from)}">
+          </label>
+          <label class="field">Bis
+            <input type="date" id="dashTo" value="${esc(state.dashboard.to)}">
+          </label>
+        `}
+        <label class="field">Kategorie
+          <select id="dashCategory">
+            <option value="all" ${category === 'all' ? 'selected' : ''}>Alle Kategorien</option>
+            ${CATEGORIES.map(c => `<option value="${esc(c)}" ${c === category ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+    </div>
+
+    ${d.unclassifiedCount > 0 ? `
+      <div class="alert">
+        ⚠️ ${d.unclassifiedCount} Buchung(en) im gewählten Zeitraum sind noch nicht klassifiziert.
+        ${state.role === 'admin' ? `<a id="gotoCategorize">Jetzt kategorisieren →</a>` : ''}
+      </div>
+    ` : ''}
+
+    <div class="stat-cards">
+      <div class="stat-card income">
+        <div class="label">Einnahmen</div>
+        <div class="value num">${formatCurrency(d.stats.income)}</div>
+        <div class="badge ${incomeBadge.cls}">${incomeBadge.label}</div>
+      </div>
+      <div class="stat-card expense">
+        <div class="label">Ausgaben</div>
+        <div class="value num">${formatCurrency(d.stats.expense)}</div>
+        <div class="badge ${expenseBadge.cls}">${expenseBadge.label}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Saldo</div>
+        <div class="value num" style="color:${d.stats.saldo >= 0 ? 'var(--income)' : 'var(--expense)'}">${formatCurrency(d.stats.saldo)}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Ausgaben nach Kategorie${category !== 'all' ? ` — ${esc(category)}` : ''}</h3>
+      <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+      ${d.periodMonthsCount > 1 ? `<p class="chart-note">Zeitraum umfasst ${d.periodMonthsCount} Monate — „Ø pro Monat“ ist der Durchschnitt eines einzelnen Monats, „Zeitraum“ die Summe über den gesamten Zeitraum.</p>` : ''}
+      <table class="data-table" style="margin-top:14px;">
+        <thead><tr><th>Kategorie</th><th>Zeitraum</th><th>Ø pro Monat</th><th>Vergleich</th></tr></thead>
+        <tbody>
+          ${tableRows.map(r => `
+            <tr>
+              <td>${categoryDot(r.cat)}${esc(r.cat)}</td>
+              <td class="num">${formatCurrency(r.periodValue)}</td>
+              <td class="num">${formatCurrency(r.avgValue)}</td>
+              <td><span class="badge ${r.badge.cls}">${r.badge.label}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>${category === 'all' ? 'Saldo-Verlauf über alle Monate' : `Verlauf „${esc(category)}“ über alle Monate`}</h3>
+      <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+    </div>
   `;
 
-  const modeSelect = root.querySelector("#dash-mode");
-  const categorySelect = root.querySelector("#dash-category");
-  const periodInputsEl = root.querySelector("#dash-period-inputs");
+  // --- Event-Bindings -----------------------------------------------
+  document.getElementById('dashMode').addEventListener('change', e => {
+    state.dashboard.mode = e.target.value;
+    renderDashboard(container);
+  });
+  const monthInput = document.getElementById('dashMonth');
+  if (monthInput) monthInput.addEventListener('change', e => {
+    state.dashboard.month = e.target.value || currentMonthKey();
+    renderDashboard(container);
+  });
+  const fromInput = document.getElementById('dashFrom');
+  const toInput = document.getElementById('dashTo');
+  if (fromInput) fromInput.addEventListener('change', e => {
+    state.dashboard.from = e.target.value;
+    renderDashboard(container);
+  });
+  if (toInput) toInput.addEventListener('change', e => {
+    state.dashboard.to = e.target.value;
+    renderDashboard(container);
+  });
+  document.getElementById('dashCategory').addEventListener('change', e => {
+    state.dashboard.category = e.target.value;
+    renderDashboard(container);
+  });
+  const gotoBtn = document.getElementById('gotoCategorize');
+  if (gotoBtn) gotoBtn.addEventListener('click', () => switchTab('categorize'));
 
-  function renderPeriodInputs() {
-    if (dashFilters.mode === "month") {
-      periodInputsEl.innerHTML = `<label>Monat <input type="month" id="dash-month" value="${dashFilters.month}" /></label>`;
-      periodInputsEl.querySelector("#dash-month").addEventListener("change", (e) => {
-        dashFilters.month = e.target.value;
-        renderDashboardContent(root);
-      });
-    } else {
-      periodInputsEl.innerHTML = `
-        <label>Von <input type="date" id="dash-from" value="${dashFilters.from}" /></label>
-        <label>Bis <input type="date" id="dash-to" value="${dashFilters.to}" /></label>
-      `;
-      periodInputsEl.querySelector("#dash-from").addEventListener("change", (e) => { dashFilters.from = e.target.value; renderDashboardContent(root); });
-      periodInputsEl.querySelector("#dash-to").addEventListener("change", (e) => { dashFilters.to = e.target.value; renderDashboardContent(root); });
-    }
+  // --- Charts ----------------------------------------------------------
+  const barCanvas = document.getElementById('barChart');
+  if (barChartInstance) barChartInstance.destroy();
+  barChartInstance = new Chart(barCanvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: tableRows.map(r => r.cat),
+      datasets: [
+        { label: 'Zeitraum', data: tableRows.map(r => r.periodValue), backgroundColor: '#B5432B', borderRadius: 4, maxBarThickness: 42 },
+        { label: 'Ø pro Monat', data: tableRows.map(r => r.avgValue), backgroundColor: '#D8DBD5', borderRadius: 4, maxBarThickness: 42 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { family: 'Inter' } } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } },
+        y: { grid: { color: '#EDEFEA' }, ticks: { font: { family: 'Inter', size: 11 }, callback: v => v + ' €' } },
+      },
+    },
+  });
+
+  const lineCanvas = document.getElementById('lineChart');
+  if (lineChartInstance) lineChartInstance.destroy();
+  let lineLabels, lineData, refValue = null, mainLabel;
+  if (category === 'all'){
+    lineLabels = d.allMonthKeys;
+    lineData = d.allMonthKeys.map(mk => {
+      return store.transactions.filter(t => t.date.slice(0, 7) === mk).reduce((s, t) => s + t.amount, 0);
+    });
+    mainLabel = 'Saldo';
+  } else {
+    lineLabels = d.allMonthKeys;
+    lineData = d.allMonthKeys.map(mk => {
+      return store.transactions
+        .filter(t => t.date.slice(0, 7) === mk && t.category === category)
+        .reduce((s, t) => s + (category === INCOME_CATEGORY ? t.amount : -t.amount), 0);
+    });
+    refValue = computeOverallCategoryAverage(store.transactions, d.allMonthKeys, category);
+    mainLabel = category === INCOME_CATEGORY ? 'Einnahmen' : 'Ausgaben';
   }
-  renderPeriodInputs();
-
-  modeSelect.addEventListener("change", () => {
-    dashFilters.mode = modeSelect.value;
-    renderPeriodInputs();
-    renderDashboardContent(root);
+  const lineDatasets = [{
+    label: mainLabel, data: lineData, borderColor: category === 'all' ? '#233E36' : (category === INCOME_CATEGORY ? '#1F7A54' : '#B5432B'),
+    backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, borderWidth: 2,
+  }];
+  if (refValue != null){
+    lineDatasets.push({
+      label: 'Ø gesamt', data: lineLabels.map(() => refValue),
+      borderColor: '#9AA098', borderDash: [6, 4], pointRadius: 0, borderWidth: 1.5,
+    });
+  }
+  lineChartInstance = new Chart(lineCanvas.getContext('2d'), {
+    type: 'line',
+    data: { labels: lineLabels.map(monthLabelShort), datasets: lineDatasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { family: 'Inter' } } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } },
+        y: { grid: { color: '#EDEFEA' }, ticks: { font: { family: 'Inter', size: 11 }, callback: v => v + ' €' } },
+      },
+    },
   });
-  categorySelect.addEventListener("change", () => {
-    dashFilters.category = categorySelect.value;
-    renderDashboardContent(root);
-  });
-
-  renderDashboardContent(root);
 }
 
-function renderDashboardContent(root) {
-  const content = root.querySelector("#dash-content");
-
-  let txs, periodLabel, excludeMonthForAvg;
-  if (dashFilters.mode === "month") {
-    txs = store.transactions.filter((t) => t.date.startsWith(dashFilters.month));
-    periodLabel = monthLabel(dashFilters.month);
-    excludeMonthForAvg = dashFilters.month;
-  } else if (dashFilters.from && dashFilters.to) {
-    txs = store.transactions.filter((t) => t.date >= dashFilters.from && t.date <= dashFilters.to);
-    periodLabel = `${dashFilters.from} – ${dashFilters.to}`;
-    excludeMonthForAvg = null;
-  } else {
-    txs = [];
-    periodLabel = "Zeitraum wählen";
-    excludeMonthForAvg = null;
+/* ========================================================================
+   IMPORT: RENDERING & LOGIK
+   ======================================================================== */
+async function processImportFile(text, fileName){
+  const cleanText = text.replace(/^\uFEFF/, '');
+  let parseResult;
+  try {
+    parseResult = parseBankCsv(cleanText);
+  } catch (err){
+    showToast('CSV konnte nicht gelesen werden: ' + err.message, 'error');
+    return;
   }
+  state.importState.parseResult = parseResult;
+  state.importState.manualMapping = null;
+  state.importState.fileName = fileName || '';
+  await buildPreview();
+}
 
-  if (dashFilters.category) txs = txs.filter((t) => t.category === dashFilters.category);
-
-  const income = txs.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-  const expenses = txs.filter((t) => t.amount < 0).reduce((s, t) => s + t.amount, 0);
-  const saldo = income + expenses;
-  const uncategorizedCount = txs.filter((t) => t.category === UNCATEGORIZED).length;
-  const averages = dashFilters.mode === "month" ? computeAverages(excludeMonthForAvg) : null;
-
-  let statsHtml;
-  if (dashFilters.category) {
-    const isIncomeCat = dashFilters.category === INCOME_CATEGORY;
-    const catTotal = Math.abs(txs.reduce((s, t) => s + t.amount, 0));
-    const avgForCat = averages ? averages.perCategory[dashFilters.category] : null;
-    statsHtml = `
-      <div class="grid-2">
-        <div class="card stat">
-          <div class="label">${isIncomeCat ? "Eingenommen" : "Ausgegeben"} in "${escapeHtml(dashFilters.category)}" — ${periodLabel}</div>
-          <div class="value ${isIncomeCat ? "income" : "expense"}">${fmtEuro(catTotal)}</div>
-        </div>
-        <div class="card stat">
-          <div class="label">Vergleich zum Monatsdurchschnitt</div>
-          <div class="value" style="font-size:1.1em;">${averages ? comparisonBadgeHtml(catTotal, avgForCat) : '<span class="muted">nur im Monats-Modus verfügbar</span>'}</div>
-        </div>
-      </div>
-    `;
-  } else {
-    statsHtml = `
-      <div class="grid-3">
-        <div class="card stat"><div class="label">Einnahmen — ${periodLabel}</div><div class="value income">${fmtEuro(income)}</div></div>
-        <div class="card stat">
-          <div class="label">Ausgaben — ${periodLabel}</div>
-          <div class="value expense">${fmtEuro(Math.abs(expenses))}</div>
-          ${averages ? `<div style="margin-top:6px; font-size:0.85em;">${comparisonBadgeHtml(Math.abs(expenses), averages.totalExpense)}</div>` : ""}
-        </div>
-        <div class="card stat"><div class="label">Saldo</div><div class="value">${fmtEuro(saldo)}</div></div>
-      </div>
-    `;
+async function buildPreview(){
+  const { rows, headerCells } = state.importState.parseResult;
+  const colMap = state.importState.manualMapping || state.importState.parseResult.colMap;
+  const existingHashes = new Set(store.transactions.map(t => t.hash));
+  const seenInFile = new Set();
+  const previewRows = [];
+  for (const row of rows){
+    const candidate = buildCandidate(row, colMap, headerCells);
+    if (!candidate.isoDate || isNaN(candidate.amount)) continue;
+    const isPending = candidate.status && candidate.status.toLowerCase().includes('vorgemerkt');
+    const hash = await computeHash(candidate.isoDate, candidate.amount, row.lineText);
+    let statusFlag = 'ok';
+    if (isPending) statusFlag = 'vorgemerkt';
+    else if (existingHashes.has(hash) || seenInFile.has(hash)) statusFlag = 'duplicate';
+    seenInFile.add(hash);
+    const category = matchCategory(candidate.description);
+    const nameGuess = (candidate.description.split(' — ')[0] || '').toLowerCase();
+    previewRows.push({
+      candidate, hash, statusFlag, category,
+      include: statusFlag === 'ok',
+      saveRule: false,
+      ruleKeyword: nameGuess,
+    });
   }
+  state.importState.previewRows = previewRows;
+  state.importState.dirty = previewRows.length > 0;
+  renderImport(document.getElementById('viewContainer'));
+}
 
-  const expenseCategories = CATEGORIES.filter((c) => c !== INCOME_CATEGORY);
-  const sums = expenseCategories.map((cat) =>
-    Math.abs(txs.filter((t) => t.category === cat && t.amount < 0).reduce((s, t) => s + t.amount, 0))
-  );
+function importSummaryText(){
+  const rows = state.importState.previewRows;
+  const toImport = rows.filter(r => r.include).length;
+  const dup = rows.filter(r => r.statusFlag === 'duplicate').length;
+  const pending = rows.filter(r => r.statusFlag === 'vorgemerkt').length;
+  return `<strong>${toImport}</strong> werden importiert · <strong>${dup}</strong> Duplikate · <strong>${pending}</strong> vorgemerkt`;
+}
 
-  const categorySectionHtml = dashFilters.category
-    ? ""
-    : `
+function renderImport(container){
+  const st = state.importState;
+  const hasPreview = st.previewRows.length > 0;
+  const colMap = st.manualMapping || st.parseResult?.colMap || {};
+  const headerCells = st.parseResult?.headerCells || [];
+
+  const mappingSelect = (fieldKey, label) => `
+    <label class="field">${label}
+      <select data-map-field="${fieldKey}">
+        <option value="">– keine –</option>
+        ${headerCells.map((h, i) => `<option value="${i}" ${colMap[fieldKey] === i ? 'selected' : ''}>${esc(h)}</option>`).join('')}
+      </select>
+    </label>`;
+
+  container.innerHTML = `
+    <div class="view-header">
+      <div>
+        <h2>Import</h2>
+        <p class="view-sub">CSV-Export der Bank hochladen oder einfügen — Kopfzeile &amp; Spalten werden automatisch erkannt.</p>
+      </div>
+    </div>
+
     <div class="card">
-      <h2>Ausgaben nach Kategorie${averages ? " (vs. Ø anderer Monate)" : ""}</h2>
-      ${txs.length === 0 ? '<div class="empty-state">Keine Buchungen in diesem Zeitraum.</div>' : `
-        <div class="chart-wrap"><canvas id="category-chart"></canvas></div>
-        <table style="margin-top:16px;">
-          <thead><tr><th>Kategorie</th><th class="amount">${periodLabel}</th><th class="amount">Ø / Monat</th><th>Vergleich</th></tr></thead>
-          <tbody>
-            ${expenseCategories.map((cat, i) => `
+      <div id="dropzone" class="dropzone">
+        <div class="big">📄</div>
+        <div><strong>CSV-Datei hierher ziehen</strong> oder klicken zum Auswählen</div>
+        <input type="file" id="fileInput" accept=".csv,text/csv" hidden>
+      </div>
+      <div class="import-paste">
+        <label class="field">Oder CSV-Inhalt einfügen
+          <textarea id="pasteArea" placeholder="Buchungsdatum;Wertstellung;Status;..."></textarea>
+        </label>
+      </div>
+
+      ${st.parseResult ? `
+        <details style="margin-top:16px;">
+          <summary style="cursor:pointer; font-weight:600; font-size:13.5px; color:var(--text-muted);">Erweitert: Spalten manuell zuordnen</summary>
+          <div class="mapping-grid">
+            ${mappingSelect('date', 'Datum')}
+            ${mappingSelect('amount', 'Betrag')}
+            ${mappingSelect('recipient', 'Zahlungsempfänger*in')}
+            ${mappingSelect('payer', 'Zahlungspflichtige*r')}
+            ${mappingSelect('purpose', 'Verwendungszweck')}
+            ${mappingSelect('status', 'Status')}
+          </div>
+        </details>
+      ` : ''}
+    </div>
+
+    ${hasPreview ? `
+      <div class="card">
+        <h3>Vorschau (${st.previewRows.length} Zeilen)</h3>
+        <div class="import-summary" id="importSummary">${importSummaryText()}</div>
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead>
               <tr>
-                <td>${escapeHtml(cat)}</td>
-                <td class="amount">${fmtEuro(sums[i])}</td>
-                <td class="amount">${averages && averages.perCategory[cat] !== null ? fmtEuro(averages.perCategory[cat]) : "–"}</td>
-                <td>${averages ? comparisonBadgeHtml(sums[i], averages.perCategory[cat]) : '<span class="muted">–</span>'}</td>
-              </tr>`).join("")}
-          </tbody>
-        </table>
+                <th></th><th>Datum</th><th>Beschreibung</th><th>Betrag</th><th>Kategorie</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="previewBody">
+              ${st.previewRows.map((r, i) => renderPreviewRow(r, i)).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:16px;">
+          <button id="commitImportBtn" class="btn btn-primary">Importieren</button>
+          <button id="discardImportBtn" class="btn btn-ghost">Vorschau verwerfen</button>
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  // --- Dropzone / Datei-Auswahl ----------------------------------------
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault(); dropzone.classList.remove('drag');
+    const file = e.dataTransfer.files?.[0];
+    if (file) readFile(file);
+  });
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files?.[0];
+    if (file) readFile(file);
+  });
+  function readFile(file){
+    const reader = new FileReader();
+    reader.onload = () => processImportFile(String(reader.result), file.name);
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  const pasteArea = document.getElementById('pasteArea');
+  let pasteTimer = null;
+  pasteArea.addEventListener('input', e => {
+    clearTimeout(pasteTimer);
+    const val = e.target.value;
+    pasteTimer = setTimeout(() => {
+      if (val.trim().length > 10) processImportFile(val, '(eingefügt)');
+    }, 500);
+  });
+
+  // --- Manuelle Spaltenzuordnung ----------------------------------------
+  container.querySelectorAll('[data-map-field]').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const current = state.importState.manualMapping || { ...state.importState.parseResult.colMap };
+      const val = sel.value === '' ? null : parseInt(sel.value, 10);
+      current[sel.dataset.mapField] = val;
+      state.importState.manualMapping = current;
+      buildPreview();
+    });
+  });
+
+  if (!hasPreview) return;
+
+  // --- Vorschau-Zeilen: Events -------------------------------------------
+  container.querySelectorAll('[data-preview-idx]').forEach(row => {
+    const idx = parseInt(row.dataset.previewIdx, 10);
+    const pr = state.importState.previewRows[idx];
+
+    row.querySelector('[data-role="include"]').addEventListener('change', e => {
+      pr.include = e.target.checked;
+      updateImportSummary();
+    });
+    row.querySelector('[data-role="category"]').addEventListener('change', e => {
+      pr.category = e.target.value;
+    });
+    const ruleCb = row.querySelector('[data-role="saveRule"]');
+    const ruleInput = row.querySelector('[data-role="ruleKeyword"]');
+    ruleCb.addEventListener('change', e => {
+      pr.saveRule = e.target.checked;
+      ruleInput.style.display = pr.saveRule ? '' : 'none';
+    });
+    ruleInput.addEventListener('input', e => { pr.ruleKeyword = e.target.value; });
+  });
+
+  document.getElementById('commitImportBtn').addEventListener('click', commitImport);
+  document.getElementById('discardImportBtn').addEventListener('click', () => {
+    state.importState = emptyImportState();
+    renderImport(container);
+  });
+}
+
+function renderPreviewRow(r, idx){
+  const flagMap = {
+    ok: '<span class="status-flag status-ok">OK</span>',
+    duplicate: '<span class="status-flag status-duplicate">Duplikat</span>',
+    vorgemerkt: '<span class="status-flag status-pending">Vorgemerkt</span>',
+  };
+  return `
+    <tr data-preview-idx="${idx}">
+      <td class="checkbox-cell"><input type="checkbox" data-role="include" ${r.include ? 'checked' : ''}></td>
+      <td>${formatDateDisplay(r.candidate.isoDate)}</td>
+      <td>
+        ${esc(r.candidate.description)}
+        ${renderRawDetails(r.candidate.raw, r.candidate.usedKeys)}
+      </td>
+      <td class="num amount ${r.candidate.amount >= 0 ? 'pos' : 'neg'}">${formatCurrency(r.candidate.amount)}</td>
+      <td>
+        <select data-role="category">${categoryOptions(r.category)}</select>
+        <div class="rule-inline">
+          <label><input type="checkbox" data-role="saveRule" ${r.saveRule ? 'checked' : ''}> Regel merken</label>
+          <input type="text" data-role="ruleKeyword" value="${esc(r.ruleKeyword)}" style="display:${r.saveRule ? '' : 'none'}">
+        </div>
+      </td>
+      <td>${flagMap[r.statusFlag] || ''}</td>
+    </tr>
+  `;
+}
+
+function updateImportSummary(){
+  const el = document.getElementById('importSummary');
+  if (el) el.innerHTML = importSummaryText();
+}
+
+/* ========================================================================
+   KATEGORISIEREN: RENDERING
+   ======================================================================== */
+function renderCategorize(container){
+  const unclassified = store.transactions.filter(t => t.category === DEFAULT_CATEGORY);
+  state.categorizeSelection = new Set([...state.categorizeSelection].filter(id => unclassified.some(t => t.id === id)));
+
+  container.innerHTML = `
+    <div class="view-header">
+      <div>
+        <h2>Kategorisieren</h2>
+        <p class="view-sub">${unclassified.length} unklassifizierte Buchung(en).</p>
+      </div>
+    </div>
+
+    ${unclassified.length === 0 ? `
+      <div class="card"><div class="empty-state"><div class="big">✅</div>Alles kategorisiert — keine offenen Buchungen.</div></div>
+    ` : `
+      <div class="card">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13.5px;">
+            <input type="checkbox" id="selectAllCb"> Alle auswählen
+          </label>
+          <select id="bulkCategorySelect">${categoryOptions(null)}</select>
+          <button id="bulkAssignBtn" class="btn btn-secondary btn-sm">Ausgewählte zuweisen</button>
+        </div>
+        <div class="txn-list">
+          ${unclassified.map(t => renderCategorizeRow(t)).join('')}
+        </div>
+      </div>
+    `}
+  `;
+
+  if (unclassified.length === 0) return;
+
+  container.querySelectorAll('[data-txn-id]').forEach(row => {
+    const id = row.dataset.txnId;
+    const cb = row.querySelector('[data-role="select"]');
+    if (cb){
+      cb.checked = state.categorizeSelection.has(id);
+      cb.addEventListener('change', e => {
+        if (e.target.checked) state.categorizeSelection.add(id);
+        else state.categorizeSelection.delete(id);
+      });
+    }
+    const catSelect = row.querySelector('[data-role="category"]');
+    const ruleCb = row.querySelector('[data-role="saveRule"]');
+    const ruleInput = row.querySelector('[data-role="ruleKeyword"]');
+    ruleCb.addEventListener('change', () => {
+      ruleInput.style.display = ruleCb.checked ? '' : 'none';
+    });
+    catSelect.addEventListener('change', async () => {
+      const category = catSelect.value;
+      await setTransactionCategory(id, category);
+      if (ruleCb.checked && ruleInput.value.trim()){
+        await upsertRule(ruleInput.value.trim().toLowerCase(), category);
+      }
+      showToast('Kategorie gespeichert.', 'success');
+    });
+  });
+
+  document.getElementById('selectAllCb').addEventListener('change', e => {
+    unclassified.forEach(t => {
+      if (e.target.checked) state.categorizeSelection.add(t.id);
+      else state.categorizeSelection.delete(t.id);
+    });
+    renderCategorize(container);
+  });
+
+  document.getElementById('bulkAssignBtn').addEventListener('click', async () => {
+    const category = document.getElementById('bulkCategorySelect').value;
+    const ids = [...state.categorizeSelection];
+    await bulkAssignCategory(ids, category);
+    state.categorizeSelection.clear();
+  });
+}
+
+function renderCategorizeRow(t){
+  const nameGuess = (t.description.split(' — ')[0] || '').toLowerCase();
+  return `
+    <div class="txn-row" data-txn-id="${t.id}" style="grid-template-columns:28px 90px 1fr 110px 260px;">
+      <input type="checkbox" data-role="select">
+      <div class="date num">${formatDateDisplay(t.date)}</div>
+      <div>
+        <div class="desc">${esc(t.description)}</div>
+        ${renderRawDetails(t.raw, t.usedKeys || [])}
+      </div>
+      <div class="amount num ${t.amount >= 0 ? 'pos' : 'neg'}">${formatCurrency(t.amount)}</div>
+      <div>
+        <select data-role="category">${categoryOptions(t.category)}</select>
+        <div class="rule-inline">
+          <label><input type="checkbox" data-role="saveRule"> Regel merken</label>
+          <input type="text" data-role="ruleKeyword" value="${esc(nameGuess)}" style="display:none;">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ========================================================================
+   ALLE BUCHUNGEN: RENDERING
+   ======================================================================== */
+function renderAllTransactions(container){
+  const av = state.allView;
+  const allMonthKeys = getAllMonthKeys(store.transactions);
+
+  let filtered = store.transactions;
+  if (av.month !== 'all') filtered = filtered.filter(t => t.date.slice(0, 7) === av.month);
+  if (av.category !== 'all') filtered = filtered.filter(t => t.category === av.category);
+  if (av.search.trim()){
+    const q = av.search.trim().toLowerCase();
+    filtered = filtered.filter(t => t.description.toLowerCase().includes(q));
+  }
+
+  av.selection = new Set([...av.selection].filter(id => filtered.some(t => t.id === id)));
+  const isAdmin = state.role === 'admin';
+
+  container.innerHTML = `
+    <div class="view-header">
+      <div>
+        <h2>Alle Buchungen</h2>
+        <p class="view-sub">${filtered.length} von ${store.transactions.length} Buchungen</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="dashboard-controls" style="grid-template-columns:1fr 1fr 2fr;">
+        <label class="field">Monat
+          <select id="filterMonth">
+            <option value="all" ${av.month === 'all' ? 'selected' : ''}>Alle Monate</option>
+            ${allMonthKeys.slice().reverse().map(mk => `<option value="${mk}" ${av.month === mk ? 'selected' : ''}>${monthLabel(mk)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field">Kategorie
+          <select id="filterCategory">
+            <option value="all" ${av.category === 'all' ? 'selected' : ''}>Alle Kategorien</option>
+            ${CATEGORIES.map(c => `<option value="${esc(c)}" ${av.category === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field">Suche
+          <input type="text" class="input" id="filterSearch" placeholder="Beschreibung durchsuchen …" value="${esc(av.search)}">
+        </label>
+      </div>
+    </div>
+
+    ${isAdmin ? `
+      <div class="card">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13.5px;">
+            <input type="checkbox" id="selectAllAllCb"> Alle auswählen
+          </label>
+          <select id="bulkCategorySelectAll">${categoryOptions(null)}</select>
+          <button id="bulkAssignAllBtn" class="btn btn-secondary btn-sm">Ausgewählte zuweisen</button>
+        </div>
+      </div>
+    ` : ''}
+
+    <div class="card">
+      ${filtered.length === 0 ? `
+        <div class="empty-state"><div class="big">🔍</div>Keine Buchungen gefunden.</div>
+      ` : `
+        <div class="txn-list">
+          ${filtered.map(t => renderAllRow(t, isAdmin)).join('')}
+        </div>
       `}
     </div>
   `;
 
-  const months = allMonthsSorted();
-  const trendTitle = dashFilters.category ? `Verlauf: ${dashFilters.category} pro Monat` : "Verlauf (Saldo pro Monat)";
+  document.getElementById('filterMonth').addEventListener('change', e => { av.month = e.target.value; renderAllTransactions(container); });
+  document.getElementById('filterCategory').addEventListener('change', e => { av.category = e.target.value; renderAllTransactions(container); });
+  let searchTimer = null;
+  document.getElementById('filterSearch').addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    const val = e.target.value;
+    searchTimer = setTimeout(() => { av.search = val; renderAllTransactions(container); }, 300);
+  });
 
-  content.innerHTML = `
-    ${statsHtml}
-    ${uncategorizedCount > 0 ? `<div class="card"><span class="badge uncategorized">${uncategorizedCount} Buchung(en) noch nicht klassifiziert</span></div>` : ""}
-    ${categorySectionHtml}
-    <div class="card">
-      <h2>${trendTitle}</h2>
-      ${months.length === 0 ? '<div class="empty-state">Noch keine Buchungen importiert.</div>' : '<div class="chart-wrap"><canvas id="trend-chart"></canvas></div>'}
-    </div>
-  `;
-
-  if (categoryChart) { categoryChart.destroy(); categoryChart = null; }
-  if (!dashFilters.category && txs.length > 0) {
-    const datasets = [{ label: periodLabel, data: sums, backgroundColor: "#c2542f", borderRadius: 4 }];
-    if (averages) {
-      datasets.push({
-        label: "Ø pro Monat",
-        data: expenseCategories.map((cat) => averages.perCategory[cat] || 0),
-        backgroundColor: "#c2c7ce",
-        borderRadius: 4,
+  container.querySelectorAll('[data-txn-id]').forEach(row => {
+    const id = row.dataset.txnId;
+    const cb = row.querySelector('[data-role="select"]');
+    if (cb){
+      cb.checked = av.selection.has(id);
+      cb.addEventListener('change', e => {
+        if (e.target.checked) av.selection.add(id);
+        else av.selection.delete(id);
       });
     }
-    categoryChart = new Chart(content.querySelector("#category-chart"), {
-      type: "bar",
-      data: { labels: expenseCategories, datasets },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true } } },
-    });
-  }
-
-  if (trendChart) { trendChart.destroy(); trendChart = null; }
-  if (months.length > 0) {
-    let trendDatasets;
-    if (dashFilters.category) {
-      const catTrend = monthlyCategoryExpenses(dashFilters.category, months);
-      const allTimeAvg = computeAverages(null).perCategory[dashFilters.category] || 0;
-      trendDatasets = [
-        { label: dashFilters.category, data: catTrend, borderColor: "#2f6f4f", backgroundColor: "rgba(47,111,79,0.1)", fill: true, tension: 0.2 },
-        { label: "Ø gesamt", data: months.map(() => allTimeAvg), borderColor: "#9aa1ab", borderDash: [6, 4], pointRadius: 0, fill: false },
-      ];
-    } else {
-      const trendData = months.map((m) => store.transactions.filter((t) => t.date.startsWith(m)).reduce((s, t) => s + t.amount, 0));
-      trendDatasets = [{ label: "Saldo (€)", data: trendData, borderColor: "#2f6f4f", backgroundColor: "rgba(47,111,79,0.1)", fill: true, tension: 0.2 }];
+    const catSelect = row.querySelector('[data-role="category"]');
+    if (catSelect){
+      catSelect.addEventListener('change', async () => {
+        await setTransactionCategory(id, catSelect.value);
+        showToast('Kategorie aktualisiert.', 'success');
+      });
     }
-    trendChart = new Chart(content.querySelector("#trend-chart"), {
-      type: "line",
-      data: { labels: months.map(monthLabel), datasets: trendDatasets },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: !!dashFilters.category } } },
+    const delBtn = row.querySelector('[data-role="delete"]');
+    if (delBtn) delBtn.addEventListener('click', () => deleteTransactionById(id));
+  });
+
+  if (isAdmin){
+    document.getElementById('selectAllAllCb').addEventListener('change', e => {
+      filtered.forEach(t => { if (e.target.checked) av.selection.add(t.id); else av.selection.delete(t.id); });
+      renderAllTransactions(container);
+    });
+    document.getElementById('bulkAssignAllBtn').addEventListener('click', async () => {
+      const category = document.getElementById('bulkCategorySelectAll').value;
+      const ids = [...av.selection];
+      await bulkAssignCategory(ids, category);
+      av.selection.clear();
     });
   }
 }
 
-/* ============================================================
-   7) VIEW: IMPORT
-   ============================================================ */
-function renderImport(root) {
-  root.innerHTML = `
-    <div class="card">
-      <h2>CSV importieren</h2>
-      <p class="muted">Exportiere die Umsatzliste eures Bankkontos als CSV und lade sie hier hoch.</p>
-      <div id="dropzone" class="dropzone">
-        <input type="file" id="file-input" accept=".csv,text/csv" class="hidden" />
-        <p>Datei hierher ziehen oder klicken zum Auswählen</p>
+function renderAllRow(t, isAdmin){
+  return `
+    <div class="txn-row ${isAdmin ? '' : 'compact'}" data-txn-id="${t.id}" style="grid-template-columns:${isAdmin ? '28px 90px 1fr 110px 210px 34px' : '90px 1fr 110px'};">
+      ${isAdmin ? `<input type="checkbox" data-role="select">` : ''}
+      <div class="date num">${formatDateDisplay(t.date)}</div>
+      <div>
+        <div class="desc">${esc(t.description)}</div>
+        ${renderRawDetails(t.raw, t.usedKeys || [])}
       </div>
-      <details style="margin-top:12px">
-        <summary class="muted" style="cursor:pointer">Oder CSV-Inhalt einfügen</summary>
-        <textarea id="paste-area" rows="6" style="width:100%; margin-top:8px; font-family:monospace; font-size:0.85em;" placeholder="CSV-Inhalt hier einfügen..."></textarea>
-        <button class="btn" id="paste-btn" style="margin-top:8px">Einfügen übernehmen</button>
-      </details>
-    </div>
-    <div id="mapping-root"></div>
-  `;
-
-  const dropzone = root.querySelector("#dropzone");
-  const fileInput = root.querySelector("#file-input");
-  dropzone.addEventListener("click", () => fileInput.click());
-  dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
-  dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
-  dropzone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropzone.classList.remove("dragover");
-    const file = e.dataTransfer.files[0];
-    if (file) readFile(file, root);
-  });
-  fileInput.addEventListener("change", () => { if (fileInput.files[0]) readFile(fileInput.files[0], root); });
-  root.querySelector("#paste-btn").addEventListener("click", () => {
-    const text = root.querySelector("#paste-area").value;
-    if (text.trim()) handleCsvText(text, root);
-  });
-}
-
-function readFile(file, root) {
-  const reader = new FileReader();
-  reader.onload = () => handleCsvText(reader.result, root);
-  reader.readAsText(file, "UTF-8");
-}
-
-function handleCsvText(text, root) {
-  const analyzed = analyzeCsv(text);
-  const mappingRoot = root.querySelector("#mapping-root");
-  if (analyzed.error) {
-    mappingRoot.innerHTML = `<div class="card"><p class="error-text">${analyzed.error}</p></div>`;
-    return;
-  }
-  renderMapping(mappingRoot, analyzed);
-}
-
-function renderMapping(root, analyzed) {
-  const { headers, guess } = analyzed;
-  const colOptions = headers.map((h, i) => `<option value="${i}">${escapeHtml(h)}</option>`).join("");
-
-  root.innerHTML = `
-    <div class="card">
-      <p class="muted">${analyzed.rows.length} Buchungszeile(n) erkannt (Kopfzeile: Zeile ${analyzed.headerRowIndex + 1}, Trennzeichen "${analyzed.delimiter}"). Spalten wurden automatisch zugeordnet, alle ${headers.length} Original-Spalten werden unabhängig davon vollständig mitgespeichert.</p>
-      <details>
-        <summary class="muted" style="cursor:pointer">Spalten-Zuordnung anpassen (normalerweise nicht nötig)</summary>
-        <div class="grid-3" style="margin-top:12px">
-          <label>Datum-Spalte <select id="map-date">${colOptions}</select></label>
-          <label>Betrag-Spalte <select id="map-amount">${colOptions}</select></label>
-          <label>Beschreibung-Spalte(n) <select id="map-desc" multiple size="4">${colOptions}</select></label>
-        </div>
-        <button class="btn btn-primary" id="build-preview-btn" style="margin-top:16px">Vorschau neu erzeugen</button>
-      </details>
-    </div>
-    <div id="preview-root"></div>
-  `;
-
-  const dateSel = root.querySelector("#map-date");
-  const amountSel = root.querySelector("#map-amount");
-  const descSel = root.querySelector("#map-desc");
-  if (guess.dateCol !== -1) dateSel.value = String(guess.dateCol);
-  if (guess.amountCol !== -1) amountSel.value = String(guess.amountCol);
-  Array.from(descSel.options).forEach((opt) => { if (guess.descriptionCols.includes(Number(opt.value))) opt.selected = true; });
-
-  const previewRoot = root.querySelector("#preview-root");
-
-  root.querySelector("#build-preview-btn").addEventListener("click", () => {
-    const dateCol = Number(dateSel.value);
-    const amountCol = Number(amountSel.value);
-    const descCols = Array.from(descSel.selectedOptions).map((o) => Number(o.value));
-    buildPreview(previewRoot, analyzed, { dateCol, amountCol, descCols, statusCol: guess.statusCol });
-  });
-
-  // Direkt mit der automatischen Zuordnung starten - kein Klick nötig.
-  if (guess.dateCol !== -1 && guess.amountCol !== -1) {
-    buildPreview(previewRoot, analyzed, {
-      dateCol: guess.dateCol,
-      amountCol: guess.amountCol,
-      descCols: guess.descriptionCols,
-      statusCol: guess.statusCol,
-    });
-  } else {
-    previewRoot.innerHTML = `<div class="card"><p class="error-text">Datum- oder Betrag-Spalte konnte nicht automatisch erkannt werden. Bitte oben unter "Spalten-Zuordnung anpassen" manuell auswählen.</p></div>`;
-  }
-}
-
-async function buildPreview(previewRoot, analyzed, mapping) {
-  previewRoot.innerHTML = `<div class="card"><p class="muted">Verarbeite...</p></div>`;
-
-  const rows = [];
-  let skippedPending = 0;
-  for (const raw of analyzed.rows) {
-    if (raw.length <= Math.max(mapping.dateCol, mapping.amountCol)) continue;
-    if (mapping.statusCol !== -1 && mapping.statusCol !== undefined) {
-      const status = (raw[mapping.statusCol] || "").toLowerCase();
-      if (status.includes("vorgemerkt")) { skippedPending++; continue; }
-    }
-    const date = parseGermanDate(raw[mapping.dateCol]);
-    const amount = parseGermanAmount(raw[mapping.amountCol]);
-    if (!date || Number.isNaN(amount)) continue;
-    const description = buildDescription(raw, mapping.descCols) || "(ohne Beschreibung)";
-    const hash = await hashTransaction(date, amount, raw);
-    const category = suggestCategory(description);
-    const rawObject = buildRawObject(analyzed.headers, raw);
-    rows.push({
-      date,
-      amount,
-      description,
-      category,
-      hash,
-      raw: rawObject,
-      rememberKeyword: mapping.descCols.length ? raw[mapping.descCols[0]] : "",
-    });
-  }
-  rows.sort((a, b) => (a.date < b.date ? 1 : -1));
-
-  const existingHashes = new Set(store.transactions.map((t) => t.hash));
-  const duplicateCount = rows.filter((r) => existingHashes.has(r.hash)).length;
-  renderPreview(previewRoot, rows, duplicateCount, skippedPending);
-}
-
-function renderPreview(root, rows, duplicateCount, skippedPending) {
-  const catOptions = CATEGORIES.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
-
-  root.innerHTML = `
-    <div class="card">
-      <h2>Vorschau (${rows.length} Buchungen)</h2>
-      ${duplicateCount > 0 ? `<p class="muted">${duplicateCount} Buchung(en) scheinen bereits importiert zu sein und werden beim Import übersprungen.</p>` : ""}
-      ${skippedPending > 0 ? `<p class="muted">${skippedPending} vorgemerkte (noch nicht gebuchte) Buchung(en) wurden automatisch ausgelassen.</p>` : ""}
-      <div style="max-height:480px; overflow:auto; margin-top:8px;">
-      <table>
-        <thead><tr><th>Datum</th><th>Beschreibung</th><th class="amount">Betrag</th><th>Kategorie</th><th>Regel merken</th></tr></thead>
-        <tbody>
-          ${rows.map((r, i) => `
-            <tr data-idx="${i}">
-              <td>${r.date}</td>
-              <td>${escapeHtml(r.description)}${rawDetailsHtml(r.raw)}</td>
-              <td class="amount ${r.amount < 0 ? "negative" : "positive"}">${fmtEuro(r.amount)}</td>
-              <td><select class="cat-select" data-idx="${i}">${catOptions}</select></td>
-              <td>
-                <label style="display:flex; align-items:center; gap:6px; font-size:0.85em;">
-                  <input type="checkbox" class="remember-cb" data-idx="${i}" />
-                  <input type="text" class="remember-kw" data-idx="${i}" value="${escapeHtml(r.rememberKeyword)}" disabled style="width:140px" />
-                </label>
-              </td>
-            </tr>`).join("")}
-        </tbody>
-      </table>
-      </div>
-      <div class="toolbar" style="margin-top:16px">
-        <button class="btn btn-primary" id="import-btn">Importieren</button>
-        <span id="import-status" class="muted"></span>
-      </div>
+      <div class="amount num ${t.amount >= 0 ? 'pos' : 'neg'}">${formatCurrency(t.amount)}</div>
+      ${isAdmin ? `
+        <select data-role="category">${categoryOptions(t.category)}</select>
+        <button class="btn btn-danger btn-sm" data-role="delete" title="Löschen">🗑</button>
+      ` : `
+        <div><span class="badge badge-neutral">${categoryDot(t.category)}${esc(t.category)}</span></div>
+      `}
     </div>
   `;
-
-  root.querySelectorAll(".cat-select").forEach((sel) => {
-    const idx = Number(sel.dataset.idx);
-    sel.value = rows[idx].category;
-    sel.addEventListener("change", () => (rows[idx].category = sel.value));
-  });
-  root.querySelectorAll(".remember-cb").forEach((cb) => {
-    cb.addEventListener("change", () => {
-      const idx = Number(cb.dataset.idx);
-      root.querySelector(`.remember-kw[data-idx="${idx}"]`).disabled = !cb.checked;
-    });
-  });
-  root.querySelectorAll(".remember-kw").forEach((input) => {
-    input.addEventListener("input", () => { rows[Number(input.dataset.idx)].rememberKeyword = input.value; });
-  });
-
-  root.querySelector("#import-btn").addEventListener("click", async () => {
-    const btn = root.querySelector("#import-btn");
-    const status = root.querySelector("#import-status");
-    btn.disabled = true;
-    status.textContent = "Importiere...";
-    try {
-      const txsToImport = rows.map(({ rememberKeyword, ...tx }) => tx);
-      const result = await importTransactions(txsToImport);
-      const rememberChecks = Array.from(root.querySelectorAll(".remember-cb")).filter((cb) => cb.checked);
-      for (const cb of rememberChecks) {
-        const idx = Number(cb.dataset.idx);
-        const kw = rows[idx].rememberKeyword;
-        if (kw && kw.trim()) await addRule(kw, rows[idx].category);
-      }
-      status.textContent = `${result.imported} importiert, ${result.skipped} übersprungen (Duplikate).`;
-      showToast(`${result.imported} Buchungen importiert`);
-    } catch (err) {
-      status.textContent = "Fehler beim Import: " + err.message;
-    } finally {
-      btn.disabled = false;
-    }
-  });
 }
 
-/* ============================================================
-   8) VIEW: KATEGORISIEREN
-   ============================================================ */
-function renderCategorize(root) {
-  const items = store.transactions.filter((t) => t.category === UNCATEGORIZED).sort((a, b) => (a.date < b.date ? 1 : -1));
-  const catOptions = CATEGORIES.filter((c) => c !== UNCATEGORIZED).map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
-
-  root.innerHTML = `
-    <div class="card">
-      <h2>Nicht klassifizierte Buchungen (${items.length})</h2>
-      ${items.length === 0 ? '<div class="empty-state">Alles kategorisiert. 🎉</div>' : `
-        <div class="toolbar">
-          <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="select-all-cb" /> Alle auswählen</label>
-          <span id="selected-count" class="muted">0 ausgewählt</span>
-          <select id="bulk-cat-select">
-            <option value="">Kategorie für Auswahl...</option>
-            ${catOptions}
-          </select>
-          <button class="btn btn-primary" id="bulk-assign-btn" disabled>Zuweisen</button>
-        </div>
-        <div style="max-height:600px; overflow:auto;">
-        <table>
-          <thead><tr><th></th><th>Datum</th><th>Beschreibung</th><th class="amount">Betrag</th><th>Kategorie</th><th>Regel merken</th></tr></thead>
-          <tbody>
-            ${items.map((t) => `
-              <tr data-id="${t.id}">
-                <td><input type="checkbox" class="row-cb" data-id="${t.id}" /></td>
-                <td>${t.date}</td>
-                <td>${escapeHtml(t.description)}${rawDetailsHtml(t.raw)}</td>
-                <td class="amount ${t.amount < 0 ? "negative" : "positive"}">${fmtEuro(t.amount)}</td>
-                <td>
-                  <select class="cat-select" data-id="${t.id}">
-                    <option value="">Kategorie wählen...</option>
-                    ${catOptions}
-                  </select>
-                </td>
-                <td>
-                  <label style="display:flex; align-items:center; gap:6px; font-size:0.85em;">
-                    <input type="checkbox" class="remember-cb" data-id="${t.id}" /> Regel merken
-                  </label>
-                </td>
-              </tr>`).join("")}
-          </tbody>
-        </table>
-        </div>`}
-    </div>
-  `;
-
-  root.querySelectorAll(".cat-select").forEach((sel) => {
-    sel.addEventListener("change", async () => {
-      const id = sel.dataset.id;
-      const category = sel.value;
-      if (!category) return;
-      sel.disabled = true;
-      try {
-        await updateTransactionCategory(id, category);
-        const tx = store.transactions.find((t) => t.id === id);
-        const rememberCb = root.querySelector(`.remember-cb[data-id="${id}"]`);
-        if (rememberCb && rememberCb.checked && tx) {
-          const keyword = tx.description.split(" — ")[0];
-          await addRule(keyword, category);
-        }
-        showToast("Kategorie gespeichert");
-      } catch (err) {
-        showToast("Fehler: " + err.message);
-        sel.disabled = false;
-      }
-    });
-  });
-
-  if (items.length === 0) return;
-
-  const rowCbs = root.querySelectorAll(".row-cb");
-  const selectAllCb = root.querySelector("#select-all-cb");
-  const selectedCountEl = root.querySelector("#selected-count");
-  const bulkAssignBtn = root.querySelector("#bulk-assign-btn");
-  const bulkCatSelect = root.querySelector("#bulk-cat-select");
-
-  function updateBulkState() {
-    const checked = Array.from(rowCbs).filter((cb) => cb.checked);
-    selectedCountEl.textContent = `${checked.length} ausgewählt`;
-    bulkAssignBtn.disabled = checked.length === 0 || !bulkCatSelect.value;
-  }
-
-  selectAllCb.addEventListener("change", () => {
-    rowCbs.forEach((cb) => (cb.checked = selectAllCb.checked));
-    updateBulkState();
-  });
-  rowCbs.forEach((cb) => cb.addEventListener("change", updateBulkState));
-  bulkCatSelect.addEventListener("change", updateBulkState);
-
-  bulkAssignBtn.addEventListener("click", async () => {
-    const ids = Array.from(rowCbs).filter((cb) => cb.checked).map((cb) => cb.dataset.id);
-    const category = bulkCatSelect.value;
-    if (ids.length === 0 || !category) return;
-    bulkAssignBtn.disabled = true;
-    try {
-      await updateTransactionsCategoryBulk(ids, category);
-      showToast(`${ids.length} Buchungen kategorisiert`);
-    } catch (err) {
-      showToast("Fehler: " + err.message);
-      bulkAssignBtn.disabled = false;
-    }
-  });
-}
-
-/* ============================================================
-   9) VIEW: ALLE BUCHUNGEN
-   ============================================================ */
-let txFilters = { month: "", category: "", search: "" };
-
-function renderTransactions(root) {
-  const months = Array.from(new Set(store.transactions.map((t) => t.date.slice(0, 7)))).sort().reverse();
-
-  root.innerHTML = `
-    <div class="card">
-      <div class="toolbar">
-        <label>Monat
-          <select id="f-month">
-            <option value="">Alle</option>
-            ${months.map((m) => `<option value="${m}" ${txFilters.month === m ? "selected" : ""}>${m}</option>`).join("")}
-          </select>
-        </label>
-        <label>Kategorie
-          <select id="f-category">
-            <option value="">Alle</option>
-            ${CATEGORIES.map((c) => `<option value="${escapeHtml(c)}" ${txFilters.category === c ? "selected" : ""}>${escapeHtml(c)}</option>`).join("")}
-          </select>
-        </label>
-        <label>Suche <input type="search" id="f-search" placeholder="Beschreibung..." value="${escapeHtml(txFilters.search)}" /></label>
-      </div>
-      <div id="tx-table-wrap"></div>
-    </div>
-  `;
-
-  root.querySelector("#f-month").addEventListener("change", (e) => { txFilters.month = e.target.value; renderTxTable(root); });
-  root.querySelector("#f-category").addEventListener("change", (e) => { txFilters.category = e.target.value; renderTxTable(root); });
-  root.querySelector("#f-search").addEventListener("input", (e) => { txFilters.search = e.target.value; renderTxTable(root); });
-
-  renderTxTable(root);
-}
-
-function renderTxTable(root) {
-  const wrap = root.querySelector("#tx-table-wrap");
-  let items = [...store.transactions];
-  if (txFilters.month) items = items.filter((t) => t.date.startsWith(txFilters.month));
-  if (txFilters.category) items = items.filter((t) => t.category === txFilters.category);
-  if (txFilters.search) {
-    const q = txFilters.search.toLowerCase();
-    items = items.filter((t) => t.description.toLowerCase().includes(q));
-  }
-  items.sort((a, b) => (a.date < b.date ? 1 : -1));
-  const total = items.reduce((s, t) => s + t.amount, 0);
-  const catOptions = CATEGORIES.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
-
-  wrap.innerHTML = `
-    <p class="muted">${items.length} Buchung(en) — Summe: ${fmtEuro(total)}</p>
-    ${isAdmin ? `
-      <div class="toolbar">
-        <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="tx-select-all-cb" /> Alle auswählen</label>
-        <span id="tx-selected-count" class="muted">0 ausgewählt</span>
-        <select id="tx-bulk-cat-select">
-          <option value="">Kategorie für Auswahl...</option>
-          ${catOptions}
-        </select>
-        <button class="btn btn-primary" id="tx-bulk-assign-btn" disabled>Zuweisen</button>
-      </div>
-    ` : ""}
-    <div style="max-height:600px; overflow:auto;">
-    <table>
-      <thead><tr>${isAdmin ? "<th></th>" : ""}<th>Datum</th><th>Beschreibung</th><th class="amount">Betrag</th><th>Kategorie</th><th></th></tr></thead>
-      <tbody>
-        ${items.map((t) => `
-          <tr data-id="${t.id}">
-            ${isAdmin ? `<td><input type="checkbox" class="tx-row-cb" data-id="${t.id}" /></td>` : ""}
-            <td>${t.date}</td>
-            <td>${escapeHtml(t.description)}${rawDetailsHtml(t.raw)}</td>
-            <td class="amount ${t.amount < 0 ? "negative" : "positive"}">${fmtEuro(t.amount)}</td>
-            <td>${
-              isAdmin
-                ? `<select class="cat-select" data-id="${t.id}">${catOptions}</select>`
-                : `<span class="badge">${escapeHtml(t.category)}</span>`
-            }</td>
-            <td>${isAdmin ? `<button class="btn btn-danger delete-btn" data-id="${t.id}">Löschen</button>` : ""}</td>
-          </tr>`).join("")}
-      </tbody>
-    </table>
-    </div>
-    ${items.length === 0 ? '<div class="empty-state">Keine Buchungen gefunden.</div>' : ""}
-  `;
-
-  if (!isAdmin) return;
-
-  wrap.querySelectorAll(".cat-select").forEach((sel) => {
-    const id = sel.dataset.id;
-    const tx = items.find((t) => t.id === id);
-    sel.value = tx.category;
-    sel.addEventListener("change", async () => {
-      sel.disabled = true;
-      try {
-        await updateTransactionCategory(id, sel.value);
-        showToast("Kategorie aktualisiert");
-      } catch (err) {
-        showToast("Fehler: " + err.message);
-      } finally {
-        sel.disabled = false;
-      }
-    });
-  });
-
-  wrap.querySelectorAll(".delete-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      if (!confirm("Diese Buchung wirklich löschen?")) return;
-      btn.disabled = true;
-      try {
-        await deleteTransaction(btn.dataset.id);
-        showToast("Buchung gelöscht");
-      } catch (err) {
-        showToast("Fehler: " + err.message);
-        btn.disabled = false;
-      }
-    });
-  });
-
-  if (items.length === 0) return;
-
-  const rowCbs = wrap.querySelectorAll(".tx-row-cb");
-  const selectAllCb = wrap.querySelector("#tx-select-all-cb");
-  const selectedCountEl = wrap.querySelector("#tx-selected-count");
-  const bulkAssignBtn = wrap.querySelector("#tx-bulk-assign-btn");
-  const bulkCatSelect = wrap.querySelector("#tx-bulk-cat-select");
-
-  function updateBulkState() {
-    const checked = Array.from(rowCbs).filter((cb) => cb.checked);
-    selectedCountEl.textContent = `${checked.length} ausgewählt`;
-    bulkAssignBtn.disabled = checked.length === 0 || !bulkCatSelect.value;
-  }
-
-  selectAllCb.addEventListener("change", () => {
-    rowCbs.forEach((cb) => (cb.checked = selectAllCb.checked));
-    updateBulkState();
-  });
-  rowCbs.forEach((cb) => cb.addEventListener("change", updateBulkState));
-  bulkCatSelect.addEventListener("change", updateBulkState);
-
-  bulkAssignBtn.addEventListener("click", async () => {
-    const ids = Array.from(rowCbs).filter((cb) => cb.checked).map((cb) => cb.dataset.id);
-    const category = bulkCatSelect.value;
-    if (ids.length === 0 || !category) return;
-    bulkAssignBtn.disabled = true;
-    try {
-      await updateTransactionsCategoryBulk(ids, category);
-      showToast(`${ids.length} Buchungen aktualisiert`);
-    } catch (err) {
-      showToast("Fehler: " + err.message);
-      bulkAssignBtn.disabled = false;
-    }
-  });
-}
-
-/* ============================================================
-   10) APP-SHELL: Login, Navigation, Live-Sync
-   ============================================================ */
-const loginScreen = document.getElementById("login-screen");
-const appEl = document.getElementById("app");
-const loginForm = document.getElementById("login-form");
-const loginError = document.getElementById("login-error");
-const userEmailEl = document.getElementById("user-email");
-const viewRoot = document.getElementById("view-root");
-const tabButtons = document.querySelectorAll(".tab-btn");
-
-const views = { dashboard: renderDashboard, import: renderImport, categorize: renderCategorize, transactions: renderTransactions };
-const ADMIN_ONLY_VIEWS = ["import", "categorize"];
-let currentView = "dashboard";
-let isAdmin = false;
-
-function switchView(name) {
-  if (!views[name]) return;
-  if (!isAdmin && ADMIN_ONLY_VIEWS.includes(name)) return;
-  currentView = name;
-  tabButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.view === name));
-  renderCurrentView();
-}
-function renderCurrentView() {
-  viewRoot.innerHTML = "";
-  views[currentView](viewRoot);
-}
-function applyRoleVisibility() {
-  tabButtons.forEach((btn) => {
-    btn.classList.toggle("hidden", !isAdmin && ADMIN_ONLY_VIEWS.includes(btn.dataset.view));
-  });
-}
-
-tabButtons.forEach((btn) => btn.addEventListener("click", () => switchView(btn.dataset.view)));
-document.getElementById("logout-btn").addEventListener("click", () => signOut(auth));
-
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  loginError.textContent = "";
-  const email = document.getElementById("login-email").value.trim();
-  const password = document.getElementById("login-password").value;
-  const submitBtn = loginForm.querySelector('button[type="submit"]');
-  submitBtn.disabled = true;
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-  } catch (err) {
-    loginError.textContent = "Anmeldung fehlgeschlagen. E-Mail/Passwort prüfen.";
-  } finally {
-    submitBtn.disabled = false;
-  }
-});
-
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    isAdmin = user.uid === ADMIN_UID;
-    applyRoleVisibility();
-    loginScreen.classList.add("hidden");
-    appEl.classList.remove("hidden");
-    userEmailEl.textContent = user.email + (isAdmin ? "" : " (nur Ansicht)");
-    store.start();
-    store.subscribe(() => { if (currentView !== "import") renderCurrentView(); });
-    // Falls die zuletzt aktive Ansicht für diese Rolle gesperrt ist (z.B.
-    // nach einem Logout/Login-Wechsel), auf die Übersicht zurückfallen.
-    if (!isAdmin && ADMIN_ONLY_VIEWS.includes(currentView)) currentView = "dashboard";
-    switchView(currentView);
-  } else {
-    store.stop();
-    appEl.classList.add("hidden");
-    loginScreen.classList.remove("hidden");
-    loginForm.reset();
-  }
-});
 </script>
 </body>
 </html>
