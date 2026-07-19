@@ -380,7 +380,7 @@ const CATEGORY_COLORS = {
    ======================================================================== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
+  initializeAuth, browserLocalPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
   getFirestore, initializeFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
@@ -388,7 +388,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const fbApp = initializeApp(firebaseConfig);
-const auth = getAuth(fbApp);
+// Safari hat einen bekannten Bug, bei dem Firebase Auths Standard-Speicherung über
+// IndexedDB sich unauffällig aufhängt (Login-Versuch löst weder Erfolg noch Fehler
+// aus). browserLocalPersistence nutzt stattdessen das robustere localStorage.
+const auth = initializeAuth(fbApp, { persistence: browserLocalPersistence });
 // Safari (WebKit) blockiert Firestores Standard-WebChannel-Verbindung teils mit
 // "Fetch API cannot load ... due to access control checks." Diese Einstellung lässt
 // die SDK automatisch auf Long-Polling wechseln, wenn die Streaming-Verbindung nicht
