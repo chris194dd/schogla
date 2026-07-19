@@ -8,6 +8,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
+<script>
+  // Theme so früh wie möglich setzen (vor dem ersten Rendern), damit beim Laden
+  // nicht kurz das falsche Theme aufblitzt.
+  (function(){
+    try {
+      var saved = localStorage.getItem('kontobuch-theme');
+      var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e){ /* localStorage evtl. blockiert — dann bleibt es beim Standard (Light) */ }
+  })();
+</script>
 <style>
   /* ======================================================================
      DESIGN TOKENS
@@ -37,8 +48,34 @@
     --shadow-sm:0 1px 2px rgba(27,35,30,0.06);
     --shadow-md:0 6px 20px rgba(27,35,30,0.08);
 
+    --toast-bg:#1B231E;
+    --toast-text:#F2F5EF;
+
     --font-display:'Space Grotesk', 'Inter', sans-serif;
     --font-body:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  :root[data-theme="dark"]{
+    --bg:#141712;
+    --surface:#1C211C;
+    --surface-alt:#242A23;
+    --border:#333B31;
+    --border-strong:#454E42;
+    --text:#EBEFE8;
+    --text-muted:#9BA596;
+    --text-faint:#6C7669;
+
+    --income:#4FB587;
+    --income-bg:#1E3327;
+    --expense:#E58367;
+    --expense-bg:#3B2620;
+    --primary:#3C7862;
+    --primary-hover:#4A8672;
+    --amber:#E2B457;
+    --amber-bg:#3B2F16;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,0.25);
+    --shadow-md:0 6px 20px rgba(0,0,0,0.35);
   }
 
   *{box-sizing:border-box;}
@@ -67,14 +104,16 @@
   .login-screen{
     min-height:100vh; display:flex; align-items:center; justify-content:center;
     padding:24px; background:
-      radial-gradient(circle at 20% 20%, #E7EEE4 0%, transparent 55%),
-      radial-gradient(circle at 85% 80%, #EAF1E6 0%, transparent 55%),
+      radial-gradient(circle at 20% 20%, var(--surface-alt) 0%, transparent 55%),
+      radial-gradient(circle at 85% 80%, var(--surface-alt) 0%, transparent 55%),
       var(--bg);
   }
   .login-card{
+    position:relative;
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
     box-shadow:var(--shadow-md); padding:40px 36px; width:100%; max-width:380px;
   }
+  .login-theme-toggle{position:absolute; top:16px; right:16px;}
   .login-brand{display:flex; align-items:center; gap:12px; margin-bottom:4px;}
   .login-mark{
     width:40px; height:40px; border-radius:10px; background:var(--primary); color:#fff;
@@ -86,9 +125,9 @@
   #loginForm label{display:block; font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:14px;}
   #loginForm input{
     display:block; width:100%; margin-top:6px; padding:10px 12px; border:1px solid var(--border-strong);
-    border-radius:var(--radius-sm); background:var(--bg);
+    border-radius:var(--radius-sm); background:var(--bg); color:var(--text);
   }
-  #loginForm input:focus{outline:2px solid var(--primary); outline-offset:1px; background:#fff;}
+  #loginForm input:focus{outline:2px solid var(--primary); outline-offset:1px; background:var(--surface);}
   .login-error{color:var(--expense); font-size:13px; margin:4px 0 0 0;}
 
   /* ======================================================================
@@ -111,10 +150,16 @@
   .btn-sm{padding:5px 10px; font-size:12.5px;}
   .btn-block{width:100%;}
   .btn:disabled{opacity:.5; cursor:not-allowed;}
+  .icon-btn{
+    display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px;
+    border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface);
+    color:var(--text-muted); cursor:pointer; font-size:16px; padding:0; transition:background .15s, color .15s;
+  }
+  .icon-btn:hover{background:var(--surface-alt); color:var(--text);}
 
   select, .input{
     padding:8px 10px; border:1px solid var(--border-strong); border-radius:var(--radius-sm);
-    background:#fff;
+    background:var(--surface); color:var(--text);
   }
   select:focus, .input:focus{outline:2px solid var(--primary); outline-offset:1px;}
   label.field{display:flex; flex-direction:column; gap:5px; font-size:13px; font-weight:600; color:var(--text-muted);}
@@ -186,7 +231,7 @@
   .badge-neutral{background:var(--surface-alt); color:var(--text-muted);}
 
   .alert{
-    display:flex; align-items:center; gap:10px; background:var(--amber-bg); color:#7A5F00;
+    display:flex; align-items:center; gap:10px; background:var(--amber-bg); color:var(--amber);
     border-radius:var(--radius-md); padding:12px 16px; font-size:13.5px; font-weight:600; margin-bottom:16px;
   }
   .alert a{text-decoration:underline; cursor:pointer;}
@@ -195,6 +240,9 @@
      CHARTS
      ====================================================================== */
   .chart-wrap{position:relative; height:300px; margin-top:6px;}
+  .chart-checkbox-row{display:flex; flex-wrap:wrap; gap:6px 16px; margin-bottom:10px;}
+  .chart-checkbox{display:flex; align-items:center; gap:5px; font-size:13px; color:var(--text-muted); cursor:pointer; user-select:none;}
+  .chart-checkbox input{cursor:pointer;}
   .chart-note{font-size:12px; color:var(--text-faint); margin-top:8px;}
 
   /* ======================================================================
@@ -216,7 +264,9 @@
   .txn-row{
     display:grid; grid-template-columns:90px 1fr 110px 190px 32px; gap:12px; align-items:center;
     padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface);
+    min-width:0;
   }
+  .txn-row > *{min-width:0;}
   .txn-row.compact{grid-template-columns:90px 1fr 110px;}
   .txn-row .desc{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .txn-row .date{color:var(--text-muted); font-size:13px;}
@@ -225,12 +275,12 @@
     .txn-row .amount{justify-self:start;}
   }
 
-  .raw-details{margin-top:6px; grid-column:1/-1;}
+  .raw-details{margin-top:6px; grid-column:1/-1; min-width:0;}
   .raw-details summary{cursor:pointer; color:var(--text-faint); font-size:12px; font-weight:600; user-select:none;}
   .raw-details summary:hover{color:var(--text-muted);}
-  .raw-list{display:grid; grid-template-columns:max-content 1fr; gap:3px 14px; margin:8px 0 0 0; font-size:12.5px;}
-  .raw-list dt{color:var(--text-muted); font-weight:600;}
-  .raw-list dd{margin:0; color:var(--text);}
+  .raw-list{display:grid; grid-template-columns:max-content minmax(0,1fr); gap:3px 14px; margin:8px 0 0 0; font-size:12.5px;}
+  .raw-list dt{color:var(--text-muted); font-weight:600; min-width:0;}
+  .raw-list dd{margin:0; color:var(--text); min-width:0; overflow-wrap:anywhere;}
 
   .row-actions{display:flex; align-items:center; gap:6px;}
   .checkbox-cell{width:28px;}
@@ -269,7 +319,7 @@
      ====================================================================== */
   .toast-container{position:fixed; bottom:20px; right:20px; z-index:100; display:flex; flex-direction:column; gap:8px;}
   .toast{
-    background:var(--text); color:#fff; padding:12px 16px; border-radius:var(--radius-sm); font-size:13.5px;
+    background:var(--toast-bg); color:var(--toast-text); padding:12px 16px; border-radius:var(--radius-sm); font-size:13.5px;
     font-weight:600; box-shadow:var(--shadow-md); opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s;
     border-left:4px solid var(--text-faint); max-width:320px;
   }
@@ -290,6 +340,7 @@
        ======================================================================== -->
   <div id="loginScreen" class="login-screen">
     <div class="login-card">
+      <button id="themeToggleBtnLogin" class="icon-btn login-theme-toggle" title="Darstellung umschalten">🌙</button>
       <div class="login-brand">
         <span class="login-mark">K</span>
         <h1>Kontobuch</h1>
@@ -324,6 +375,8 @@
         <button class="tab-btn" data-tab="all">Alle Buchungen</button>
       </nav>
       <div class="header-user">
+        <button id="refreshBtn" class="icon-btn" title="Aktualisieren">⟳</button>
+        <button id="themeToggleBtn" class="icon-btn" title="Darstellung umschalten">🌙</button>
         <span id="userRoleBadge" class="role-badge"></span>
         <button id="logoutBtn" class="btn btn-ghost btn-sm">Abmelden</button>
       </div>
@@ -369,7 +422,7 @@ const CATEGORIES = [
 const DEFAULT_CATEGORY = 'nicht klassifiziert';
 const INCOME_CATEGORY = 'Einkünfte';
 
-const CATEGORY_COLORS = {
+const CATEGORY_COLORS_LIGHT = {
   'Essen + Trinken': '#8A6D3B',
   'Gastronomie / Freizeit': '#B5432B',
   'Wohnung': '#3A5C82',
@@ -379,6 +432,20 @@ const CATEGORY_COLORS = {
   'Hund': '#B08900',
   'nicht klassifiziert': '#9AA098',
 };
+const CATEGORY_COLORS_DARK = {
+  'Essen + Trinken': '#C9A667',
+  'Gastronomie / Freizeit': '#E58367',
+  'Wohnung': '#7FA6D6',
+  'Einkünfte': '#4FB587',
+  'Urlaub': '#B08FE0',
+  'Auto': '#9AA1AB',
+  'Hund': '#E2B457',
+  'nicht klassifiziert': '#9BA596',
+};
+function categoryColor(cat){
+  const map = getTheme() === 'dark' ? CATEGORY_COLORS_DARK : CATEGORY_COLORS_LIGHT;
+  return map[cat] || (getTheme() === 'dark' ? '#9BA596' : '#999');
+}
 
 /* ========================================================================
    FIREBASE-INIT
@@ -420,11 +487,14 @@ const state = {
   dashboard: {
     mode: 'month',          // 'month' | 'range'
     month: currentMonthKey(),
+    monthInitialized: false, // wird beim ersten Rendern auf den letzten Monat mit Buchungen gesetzt
     from: firstDayOfCurrentMonth(),
     to: todayIso(),
     category: 'all',
+    chartCategories: new Set(), // fuer Mehrfachvergleich im Verlaufs-Chart
   },
   categorizeSelection: new Set(),
+  categorizeSearch: '',
   allView: {
     month: 'all',
     category: 'all',
@@ -514,7 +584,45 @@ function categoryOptions(selected){
   return CATEGORIES.map(c => `<option value="${esc(c)}" ${c === selected ? 'selected' : ''}>${esc(c)}</option>`).join('');
 }
 function categoryDot(cat){
-  return `<span class="cat-dot" style="background:${CATEGORY_COLORS[cat] || '#999'}"></span>`;
+  return `<span class="cat-dot" style="background:${categoryColor(cat)}"></span>`;
+}
+
+/* ------------------------------------------------------------------------
+   THEME (Light/Dark)
+   ------------------------------------------------------------------------ */
+function getTheme(){
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+}
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem('kontobuch-theme', theme); } catch (e){ /* ignorieren, z.B. Safari Private Mode */ }
+  updateThemeToggleIcons();
+}
+function updateThemeToggleIcons(){
+  const icon = getTheme() === 'dark' ? '☀️' : '🌙';
+  const btn1 = document.getElementById('themeToggleBtn');
+  const btn2 = document.getElementById('themeToggleBtnLogin');
+  if (btn1) btn1.textContent = icon;
+  if (btn2) btn2.textContent = icon;
+}
+function toggleTheme(){
+  setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+  if (state.initialRenderDone) renderCurrentView(); // Charts mit neuen Theme-Farben neu zeichnen
+}
+
+// Farben, die Chart.js-Instanzen abhängig vom aktuellen Theme benutzen (Canvas-Inhalte
+// reagieren nicht automatisch auf CSS-Variablen, deshalb hier als JS-Werte gepflegt).
+function chartPalette(){
+  const dark = getTheme() === 'dark';
+  return {
+    grid: dark ? '#2A322B' : '#EDEFEA',
+    tick: dark ? '#9BA596' : '#66716A',
+    neutralBar: dark ? '#3A423A' : '#D8DBD5',
+    refLine: dark ? '#6C7669' : '#9AA098',
+    primary: dark ? '#5FA98D' : '#233E36',
+    income: dark ? '#4FB587' : '#1F7A54',
+    expense: dark ? '#E58367' : '#B5432B',
+  };
 }
 
 function showToast(message, type = 'info'){
@@ -904,6 +1012,10 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
   }
 });
 document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+document.getElementById('refreshBtn').addEventListener('click', () => location.reload());
+document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+document.getElementById('themeToggleBtnLogin').addEventListener('click', toggleTheme);
+updateThemeToggleIcons();
 document.getElementById('tabs').addEventListener('click', e => {
   const btn = e.target.closest('.tab-btn');
   if (!btn) return;
@@ -1030,14 +1142,19 @@ let barChartInstance = null;
 let lineChartInstance = null;
 
 function renderDashboard(container){
+  if (!state.dashboard.monthInitialized){
+    const allMonths = getAllMonthKeys(store.transactions);
+    if (allMonths.length) state.dashboard.month = allMonths[allMonths.length - 1];
+    state.dashboard.monthInitialized = true;
+  }
   const d = computeDashboardData();
   const { mode, category } = state.dashboard;
 
   const incomeBadge = computeBadge(d.stats.income, d.avgByCategory[INCOME_CATEGORY], d.periodMonthsCount);
   const expenseBadge = computeBadge(d.stats.expense, d.avgExpenseTotal, d.periodMonthsCount);
 
-  const chartCategories = category === 'all' ? CATEGORIES.filter(c => c !== INCOME_CATEGORY) : [category];
-  const tableRows = chartCategories.map(cat => {
+  const barCategories = category === 'all' ? CATEGORIES.filter(c => c !== INCOME_CATEGORY) : [category];
+  const tableRows = barCategories.map(cat => {
     const periodValue = d.stats.byCategory[cat] || 0;
     const avgValue = d.avgByCategory[cat] || 0;
     const badge = computeBadge(periodValue, avgValue, d.periodMonthsCount);
@@ -1125,8 +1242,17 @@ function renderDashboard(container){
     </div>
 
     <div class="card">
-      <h3>${category === 'all' ? 'Saldo-Verlauf über alle Monate' : `Verlauf „${esc(category)}“ über alle Monate`}</h3>
+      <h3>${state.dashboard.chartCategories.size > 0 ? 'Verlauf im Kategorienvergleich' : (category === 'all' ? 'Saldo-Verlauf über alle Monate' : `Verlauf „${esc(category)}“ über alle Monate`)}</h3>
+      <div class="chart-checkbox-row">
+        ${CATEGORIES.map(c => `
+          <label class="chart-checkbox">
+            <input type="checkbox" data-role="chartCat" value="${esc(c)}" ${state.dashboard.chartCategories.has(c) ? 'checked' : ''}>
+            ${categoryDot(c)}${esc(c)}
+          </label>
+        `).join('')}
+      </div>
       <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+      ${state.dashboard.chartCategories.size > 0 ? `<p class="chart-note">Vergleich einzelner Kategorien über alle Monate. Zum Zurückschalten auf Saldo/Ø-Referenzlinie alle Häkchen entfernen.</p>` : ''}
     </div>
   `;
 
@@ -1154,10 +1280,18 @@ function renderDashboard(container){
     state.dashboard.category = e.target.value;
     renderDashboard(container);
   });
+  container.querySelectorAll('[data-role="chartCat"]').forEach(cb => {
+    cb.addEventListener('change', e => {
+      if (e.target.checked) state.dashboard.chartCategories.add(e.target.value);
+      else state.dashboard.chartCategories.delete(e.target.value);
+      renderDashboard(container);
+    });
+  });
   const gotoBtn = document.getElementById('gotoCategorize');
   if (gotoBtn) gotoBtn.addEventListener('click', () => switchTab('categorize'));
 
   // --- Charts ----------------------------------------------------------
+  const pal = chartPalette();
   const barCanvas = document.getElementById('barChart');
   if (barChartInstance) barChartInstance.destroy();
   barChartInstance = new Chart(barCanvas.getContext('2d'), {
@@ -1165,58 +1299,99 @@ function renderDashboard(container){
     data: {
       labels: tableRows.map(r => r.cat),
       datasets: [
-        { label: 'Zeitraum', data: tableRows.map(r => r.periodValue), backgroundColor: '#B5432B', borderRadius: 4, maxBarThickness: 42 },
-        { label: 'Ø pro Monat', data: tableRows.map(r => r.avgValue), backgroundColor: '#D8DBD5', borderRadius: 4, maxBarThickness: 42 },
+        { label: 'Zeitraum', data: tableRows.map(r => r.periodValue), backgroundColor: pal.expense, borderRadius: 4, maxBarThickness: 42 },
+        { label: 'Ø pro Monat', data: tableRows.map(r => r.avgValue), backgroundColor: pal.neutralBar, borderRadius: 4, maxBarThickness: 42 },
       ],
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { family: 'Inter' } } } },
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, color: pal.tick, font: { family: 'Inter' } } } },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } },
-        y: { grid: { color: '#EDEFEA' }, ticks: { font: { family: 'Inter', size: 11 }, callback: v => v + ' €' } },
+        x: { grid: { display: false }, ticks: { color: pal.tick, font: { family: 'Inter', size: 11 } } },
+        y: { grid: { color: pal.grid }, ticks: { color: pal.tick, font: { family: 'Inter', size: 11 }, callback: v => v + ' €' } },
       },
     },
   });
 
   const lineCanvas = document.getElementById('lineChart');
   if (lineChartInstance) lineChartInstance.destroy();
-  let lineLabels, lineData, refValue = null, mainLabel;
-  if (category === 'all'){
-    lineLabels = d.allMonthKeys;
-    lineData = d.allMonthKeys.map(mk => {
+  const lineLabels = d.allMonthKeys;
+  const zeroLineDataset = {
+    label: 'Null-Linie', data: lineLabels.map(() => 0),
+    borderColor: pal.refLine, borderWidth: 1, borderDash: [2, 3], pointRadius: 0, order: 99,
+  };
+  let lineDatasets;
+
+  if (state.dashboard.chartCategories.size > 0){
+    // Mehrfachvergleich: eine Linie pro angehakter Kategorie, ohne Ø-Referenzlinie
+    // (die skaliert bei mehreren gleichzeitigen Linien nicht sinnvoll).
+    lineDatasets = [...state.dashboard.chartCategories].map(cat => ({
+      label: cat,
+      data: d.allMonthKeys.map(mk => {
+        return store.transactions
+          .filter(t => t.date.slice(0, 7) === mk && t.category === cat)
+          .reduce((s, t) => s + (cat === INCOME_CATEGORY ? t.amount : -t.amount), 0);
+      }),
+      borderColor: categoryColor(cat),
+      backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, borderWidth: 2,
+    }));
+    lineDatasets.push(zeroLineDataset);
+  } else if (category === 'all'){
+    // Saldo-Verlauf: Segmente und Punkte farblich nach Vorzeichen einfärben, damit auf
+    // einen Blick klar ist, ob ein Monat über oder unter der Null-Linie liegt.
+    const lineData = d.allMonthKeys.map(mk => {
       return store.transactions.filter(t => t.date.slice(0, 7) === mk).reduce((s, t) => s + t.amount, 0);
     });
-    mainLabel = 'Saldo';
+    lineDatasets = [{
+      label: 'Saldo', data: lineData,
+      backgroundColor: 'transparent', tension: 0.3, borderWidth: 2,
+      pointRadius: 3,
+      pointBackgroundColor: lineData.map(v => v >= 0 ? pal.income : pal.expense),
+      pointBorderColor: lineData.map(v => v >= 0 ? pal.income : pal.expense),
+      segment: {
+        borderColor: ctx => {
+          const y0 = ctx.p0.parsed.y, y1 = ctx.p1.parsed.y;
+          if (y0 >= 0 && y1 >= 0) return pal.income;
+          if (y0 < 0 && y1 < 0) return pal.expense;
+          return pal.refLine; // Segment kreuzt die Null-Linie
+        },
+      },
+    }, zeroLineDataset];
   } else {
-    lineLabels = d.allMonthKeys;
-    lineData = d.allMonthKeys.map(mk => {
+    const lineData = d.allMonthKeys.map(mk => {
       return store.transactions
         .filter(t => t.date.slice(0, 7) === mk && t.category === category)
         .reduce((s, t) => s + (category === INCOME_CATEGORY ? t.amount : -t.amount), 0);
     });
-    refValue = computeOverallCategoryAverage(store.transactions, d.allMonthKeys, category);
-    mainLabel = category === INCOME_CATEGORY ? 'Einnahmen' : 'Ausgaben';
+    const refValue = computeOverallCategoryAverage(store.transactions, d.allMonthKeys, category);
+    const mainLabel = category === INCOME_CATEGORY ? 'Einnahmen' : 'Ausgaben';
+    lineDatasets = [{
+      label: mainLabel, data: lineData, borderColor: category === INCOME_CATEGORY ? pal.income : pal.expense,
+      backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, borderWidth: 2,
+    }];
+    if (refValue != null){
+      lineDatasets.push({
+        label: 'Ø gesamt', data: lineLabels.map(() => refValue),
+        borderColor: pal.refLine, borderDash: [6, 4], pointRadius: 0, borderWidth: 1.5,
+      });
+    }
+    lineDatasets.push(zeroLineDataset);
   }
-  const lineDatasets = [{
-    label: mainLabel, data: lineData, borderColor: category === 'all' ? '#233E36' : (category === INCOME_CATEGORY ? '#1F7A54' : '#B5432B'),
-    backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, borderWidth: 2,
-  }];
-  if (refValue != null){
-    lineDatasets.push({
-      label: 'Ø gesamt', data: lineLabels.map(() => refValue),
-      borderColor: '#9AA098', borderDash: [6, 4], pointRadius: 0, borderWidth: 1.5,
-    });
-  }
+
   lineChartInstance = new Chart(lineCanvas.getContext('2d'), {
     type: 'line',
     data: { labels: lineLabels.map(monthLabelShort), datasets: lineDatasets },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { family: 'Inter' } } } },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { usePointStyle: true, color: pal.tick, font: { family: 'Inter' }, filter: item => item.text !== 'Null-Linie' },
+        },
+      },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } },
-        y: { grid: { color: '#EDEFEA' }, ticks: { font: { family: 'Inter', size: 11 }, callback: v => v + ' €' } },
+        x: { grid: { display: false }, ticks: { color: pal.tick, font: { family: 'Inter', size: 11 } } },
+        y: { grid: { color: pal.grid }, ticks: { color: pal.tick, font: { family: 'Inter', size: 11 }, callback: v => v + ' €' } },
       },
     },
   });
@@ -1479,21 +1654,28 @@ function updateImportSummary(){
    KATEGORISIEREN: RENDERING
    ======================================================================== */
 function renderCategorize(container){
-  const unclassified = store.transactions.filter(t => t.category === DEFAULT_CATEGORY);
+  const allUnclassified = store.transactions.filter(t => t.category === DEFAULT_CATEGORY);
+  const searchQuery = state.categorizeSearch.trim().toLowerCase();
+  const unclassified = searchQuery
+    ? allUnclassified.filter(t => t.description.toLowerCase().includes(searchQuery))
+    : allUnclassified;
   state.categorizeSelection = new Set([...state.categorizeSelection].filter(id => unclassified.some(t => t.id === id)));
 
   container.innerHTML = `
     <div class="view-header">
       <div>
         <h2>Kategorisieren</h2>
-        <p class="view-sub">${unclassified.length} unklassifizierte Buchung(en).</p>
+        <p class="view-sub">${allUnclassified.length} unklassifizierte Buchung(en)${searchQuery ? `, ${unclassified.length} davon gefunden` : ''}.</p>
       </div>
     </div>
 
-    ${unclassified.length === 0 ? `
+    ${allUnclassified.length === 0 ? `
       <div class="card"><div class="empty-state"><div class="big">✅</div>Alles kategorisiert — keine offenen Buchungen.</div></div>
     ` : `
       <div class="card">
+        <label class="field" style="max-width:320px; margin-bottom:14px;">Suche
+          <input type="text" class="input" id="categorizeSearch" placeholder="Beschreibung durchsuchen …" value="${esc(state.categorizeSearch)}">
+        </label>
         <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
           <label style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13.5px;">
             <input type="checkbox" id="selectAllCb"> Alle auswählen
@@ -1501,14 +1683,26 @@ function renderCategorize(container){
           <select id="bulkCategorySelect"><option value="">Kategorie wählen…</option>${categoryOptions(null)}</select>
           <button id="bulkAssignBtn" class="btn btn-secondary btn-sm">Ausgewählte zuweisen</button>
         </div>
-        <div class="txn-list">
-          ${unclassified.map(t => renderCategorizeRow(t)).join('')}
-        </div>
+        ${unclassified.length === 0 ? `
+          <div class="empty-state"><div class="big">🔍</div>Keine Treffer für „${esc(state.categorizeSearch)}“.</div>
+        ` : `
+          <div class="txn-list">
+            ${unclassified.map(t => renderCategorizeRow(t)).join('')}
+          </div>
+        `}
       </div>
     `}
   `;
 
-  if (unclassified.length === 0) return;
+  if (allUnclassified.length === 0) return;
+
+  const searchInput = document.getElementById('categorizeSearch');
+  let searchTimer = null;
+  searchInput.addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    const val = e.target.value;
+    searchTimer = setTimeout(() => { state.categorizeSearch = val; renderCategorize(container); }, 300);
+  });
 
   container.querySelectorAll('[data-txn-id]').forEach(row => {
     const id = row.dataset.txnId;
