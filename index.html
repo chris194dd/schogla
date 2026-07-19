@@ -238,6 +238,7 @@
   .status-flag{font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px;}
   .status-ok{background:var(--income-bg); color:var(--income);}
   .status-duplicate{background:var(--surface-alt); color:var(--text-muted);}
+  .status-correction{background:var(--amber-bg); color:var(--amber);}
   .status-pending{background:var(--amber-bg); color:var(--amber);}
 
   .empty-state{text-align:center; padding:40px 20px; color:var(--text-muted);}
@@ -742,6 +743,24 @@ async function bulkAssignCategory(ids, category){
   }
 }
 
+async function bulkDeleteTransactions(ids){
+  if (!ids.length){ showToast('Keine Buchungen ausgewählt.', 'error'); return; }
+  const confirmMsg = ids.length === 1
+    ? 'Diese Buchung wirklich löschen?'
+    : `${ids.length} Buchungen wirklich unwiderruflich löschen?`;
+  if (!confirm(confirmMsg)) return;
+  try {
+    for (const chunk of chunkArray(ids, 400)){
+      const batch = writeBatch(db);
+      chunk.forEach(id => batch.delete(doc(db, TRANSACTIONS_COLLECTION, id)));
+      await batch.commit();
+    }
+    showToast(`${ids.length} Buchung(en) gelöscht.`, 'success');
+  } catch (err){
+    showToast('Fehler beim Löschen: ' + err.message, 'error');
+  }
+}
+
 async function commitImport(){
   const rowsToImport = state.importState.previewRows.filter(r => r.include);
   if (!rowsToImport.length){
@@ -754,8 +773,11 @@ async function commitImport(){
         await upsertRule(r.ruleKeyword.trim().toLowerCase(), r.category);
       }
     }
+    const newRows = rowsToImport.filter(r => r.statusFlag === 'ok');
+    const correctionRows = rowsToImport.filter(r => r.statusFlag === 'correction');
+
     let imported = 0;
-    for (const chunk of chunkArray(rowsToImport, 400)){
+    for (const chunk of chunkArray(newRows, 400)){
       const batch = writeBatch(db);
       for (const r of chunk){
         const ref = doc(collection(db, TRANSACTIONS_COLLECTION));
@@ -775,9 +797,20 @@ async function commitImport(){
       }
       await batch.commit();
     }
+
+    let corrected = 0;
+    for (const chunk of chunkArray(correctionRows, 400)){
+      const batch = writeBatch(db);
+      for (const r of chunk){
+        batch.update(doc(db, TRANSACTIONS_COLLECTION, r.existingId), { category: r.category });
+        corrected++;
+      }
+      await batch.commit();
+    }
+
     const dupCount = state.importState.previewRows.filter(r => r.statusFlag === 'duplicate').length;
     const pendingCount = state.importState.previewRows.filter(r => r.statusFlag === 'vorgemerkt').length;
-    showToast(`${imported} importiert, ${dupCount} Duplikate übersprungen, ${pendingCount} vorgemerkt übersprungen.`, 'success');
+    showToast(`${imported} importiert, ${corrected} Kategorien korrigiert, ${dupCount} Duplikate übersprungen, ${pendingCount} vorgemerkt übersprungen.`, 'success');
     state.importState = emptyImportState();
     renderCurrentView();
   } catch (err){
@@ -1210,7 +1243,7 @@ async function processImportFile(text, fileName){
 async function buildPreview(){
   const { rows, headerCells } = state.importState.parseResult;
   const colMap = state.importState.manualMapping || state.importState.parseResult.colMap;
-  const existingHashes = new Set(store.transactions.map(t => t.hash));
+  const existingByHash = new Map(store.transactions.map(t => [t.hash, t]));
   const seenInFile = new Set();
   const previewRows = [];
   for (const row of rows){
@@ -1218,19 +1251,34 @@ async function buildPreview(){
     if (!candidate.isoDate || isNaN(candidate.amount)) continue;
     const isPending = candidate.status && candidate.status.toLowerCase().includes('vorgemerkt');
     const hash = await computeHash(candidate.isoDate, candidate.amount, row.lineText);
+    const trustedSourceCategory = (candidate.sourceCategory && CATEGORIES.includes(candidate.sourceCategory))
+      ? candidate.sourceCategory : null;
+    const existingTx = existingByHash.get(hash);
     let statusFlag = 'ok';
-    if (isPending) statusFlag = 'vorgemerkt';
-    else if (existingHashes.has(hash) || seenInFile.has(hash)) statusFlag = 'duplicate';
+    let existingId = null;
+    let existingCategory = null;
+    if (isPending){
+      statusFlag = 'vorgemerkt';
+    } else if (existingTx || seenInFile.has(hash)){
+      if (existingTx && trustedSourceCategory && existingTx.category !== trustedSourceCategory){
+        // Datensatz existiert schon, aber die gespeicherte Kategorie weicht von der
+        // Datei ab (z.B. durch eine versehentliche Sammelkategorisierung) — Korrektur anbieten.
+        statusFlag = 'correction';
+        existingId = existingTx.id;
+        existingCategory = existingTx.category;
+      } else {
+        statusFlag = 'duplicate';
+      }
+    }
     seenInFile.add(hash);
-    const category = (candidate.sourceCategory && CATEGORIES.includes(candidate.sourceCategory))
-      ? candidate.sourceCategory
-      : matchCategory(candidate.description);
+    const category = trustedSourceCategory || matchCategory(candidate.description);
     const nameGuess = (candidate.description.split(' — ')[0] || '').toLowerCase();
     previewRows.push({
       candidate, hash, statusFlag, category,
-      include: statusFlag === 'ok',
+      include: statusFlag === 'ok' || statusFlag === 'correction',
       saveRule: false,
       ruleKeyword: nameGuess,
+      existingId, existingCategory,
     });
   }
   state.importState.previewRows = previewRows;
@@ -1240,10 +1288,11 @@ async function buildPreview(){
 
 function importSummaryText(){
   const rows = state.importState.previewRows;
-  const toImport = rows.filter(r => r.include).length;
+  const toImport = rows.filter(r => r.include && r.statusFlag === 'ok').length;
+  const toCorrect = rows.filter(r => r.include && r.statusFlag === 'correction').length;
   const dup = rows.filter(r => r.statusFlag === 'duplicate').length;
   const pending = rows.filter(r => r.statusFlag === 'vorgemerkt').length;
-  return `<strong>${toImport}</strong> werden importiert · <strong>${dup}</strong> Duplikate · <strong>${pending}</strong> vorgemerkt`;
+  return `<strong>${toImport}</strong> neu · <strong>${toCorrect}</strong> Korrekturen · <strong>${dup}</strong> Duplikate · <strong>${pending}</strong> vorgemerkt`;
 }
 
 function renderImport(container){
@@ -1397,6 +1446,7 @@ function renderPreviewRow(r, idx){
     ok: '<span class="status-flag status-ok">OK</span>',
     duplicate: '<span class="status-flag status-duplicate">Duplikat</span>',
     vorgemerkt: '<span class="status-flag status-pending">Vorgemerkt</span>',
+    correction: '<span class="status-flag status-correction">Korrektur</span>',
   };
   return `
     <tr data-preview-idx="${idx}">
@@ -1409,6 +1459,7 @@ function renderPreviewRow(r, idx){
       <td class="num amount ${r.candidate.amount >= 0 ? 'pos' : 'neg'}">${formatCurrency(r.candidate.amount)}</td>
       <td>
         <select data-role="category">${categoryOptions(r.category)}</select>
+        ${r.statusFlag === 'correction' ? `<div class="chart-note" style="margin-top:4px;">Aktuell: ${esc(r.existingCategory)} → wird korrigiert</div>` : ''}
         <div class="rule-inline">
           <label><input type="checkbox" data-role="saveRule" ${r.saveRule ? 'checked' : ''}> Regel merken</label>
           <input type="text" data-role="ruleKeyword" value="${esc(r.ruleKeyword)}" style="display:${r.saveRule ? '' : 'none'}">
@@ -1447,7 +1498,7 @@ function renderCategorize(container){
           <label style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13.5px;">
             <input type="checkbox" id="selectAllCb"> Alle auswählen
           </label>
-          <select id="bulkCategorySelect">${categoryOptions(null)}</select>
+          <select id="bulkCategorySelect"><option value="">Kategorie wählen…</option>${categoryOptions(null)}</select>
           <button id="bulkAssignBtn" class="btn btn-secondary btn-sm">Ausgewählte zuweisen</button>
         </div>
         <div class="txn-list">
@@ -1495,6 +1546,7 @@ function renderCategorize(container){
 
   document.getElementById('bulkAssignBtn').addEventListener('click', async () => {
     const category = document.getElementById('bulkCategorySelect').value;
+    if (!category){ showToast('Bitte zuerst eine Kategorie auswählen.', 'error'); return; }
     const ids = [...state.categorizeSelection];
     await bulkAssignCategory(ids, category);
     state.categorizeSelection.clear();
@@ -1575,8 +1627,9 @@ function renderAllTransactions(container){
           <label style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13.5px;">
             <input type="checkbox" id="selectAllAllCb"> Alle auswählen
           </label>
-          <select id="bulkCategorySelectAll">${categoryOptions(null)}</select>
+          <select id="bulkCategorySelectAll"><option value="">Kategorie wählen…</option>${categoryOptions(null)}</select>
           <button id="bulkAssignAllBtn" class="btn btn-secondary btn-sm">Ausgewählte zuweisen</button>
+          <button id="bulkDeleteAllBtn" class="btn btn-danger btn-sm">Ausgewählte löschen</button>
         </div>
       </div>
     ` : ''}
@@ -1629,8 +1682,14 @@ function renderAllTransactions(container){
     });
     document.getElementById('bulkAssignAllBtn').addEventListener('click', async () => {
       const category = document.getElementById('bulkCategorySelectAll').value;
+      if (!category){ showToast('Bitte zuerst eine Kategorie auswählen.', 'error'); return; }
       const ids = [...av.selection];
       await bulkAssignCategory(ids, category);
+      av.selection.clear();
+    });
+    document.getElementById('bulkDeleteAllBtn').addEventListener('click', async () => {
+      const ids = [...av.selection];
+      await bulkDeleteTransactions(ids);
       av.selection.clear();
     });
   }
