@@ -1191,7 +1191,10 @@ function switchTab(tab){
 /* ========================================================================
    APP-SHELL / ROUTER
    ======================================================================== */
+let __renderCallCount = 0;
 function renderCurrentView(){
+  __renderCallCount++;
+  console.log('[DEBUG] renderCurrentView Aufruf #' + __renderCallCount, { tab: state.currentTab });
   const container = document.getElementById('viewContainer');
   if (state.currentTab === 'import' && state.importState.dirty){
     // Ungespeicherte Import-Vorschau nicht durch Live-Updates wegrendern.
@@ -2091,6 +2094,7 @@ function renderRules(container){
    ALLE BUCHUNGEN: RENDERING
    ======================================================================== */
 function renderAllTransactions(container){
+  console.log('[DEBUG] renderAllTransactions start', { month: state.allView.month, category: state.allView.category, totalTx: store.transactions.length });
   const av = state.allView;
   const allMonthKeys = getAllMonthKeys(store.transactions);
 
@@ -2106,12 +2110,15 @@ function renderAllTransactions(container){
     const q = av.search.trim().toLowerCase();
     filtered = filtered.filter(t => t.description.toLowerCase().includes(q));
   }
+  console.log('[DEBUG] gefiltert', { filteredCount: filtered.length });
 
   av.selection = new Set([...av.selection].filter(id => filtered.some(t => t.id === id)));
   const isAdmin = state.role === 'admin';
   const visible = filtered.slice(0, av.visibleCount);
   const hasMore = filtered.length > visible.length;
+  console.log('[DEBUG] vor innerHTML-Aufbau', { visibleCount: visible.length, isAdmin });
 
+  const htmlStart = performance.now();
   container.innerHTML = `
     <div class="view-header">
       <div>
@@ -2171,6 +2178,7 @@ function renderAllTransactions(container){
       `}
     </div>
   `;
+  console.log('[DEBUG] innerHTML gesetzt', { dauerMs: (performance.now() - htmlStart).toFixed(1), htmlLength: container.innerHTML.length });
 
   document.getElementById('filterMonth').addEventListener('change', e => { av.month = e.target.value; av.visibleCount = 80; renderAllTransactions(container); });
   document.getElementById('filterCategory').addEventListener('change', e => { av.category = e.target.value; av.visibleCount = 80; renderAllTransactions(container); });
@@ -2185,6 +2193,7 @@ function renderAllTransactions(container){
     const val = e.target.value;
     searchTimer = setTimeout(() => { av.search = val; av.visibleCount = 80; renderAllTransactions(container); }, 300);
   });
+  console.log('[DEBUG] Basis-Listener verdrahtet, starte Zeilen-Verdrahtung');
 
   container.querySelectorAll('[data-txn-id]').forEach(row => {
     const id = row.dataset.txnId;
@@ -2208,6 +2217,7 @@ function renderAllTransactions(container){
     const delBtn = row.querySelector('[data-role="delete"]');
     if (delBtn) delBtn.addEventListener('click', () => deleteTransactionById(id));
   });
+  console.log('[DEBUG] Zeilen-Verdrahtung fertig');
 
   if (isAdmin){
     document.getElementById('selectAllAllCb').addEventListener('change', e => {
@@ -2227,6 +2237,7 @@ function renderAllTransactions(container){
       av.selection.clear();
     });
   }
+  console.log('[DEBUG] renderAllTransactions komplett fertig');
 }
 
 function renderAllRow(t, isAdmin){
