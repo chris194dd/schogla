@@ -577,7 +577,7 @@ function findHeaderRowIndex(lines, delimiter){
   for (let i = 0; i < Math.min(lines.length, 25); i++){
     const cells = parseCsvLine(lines[i], delimiter).map(c => c.toLowerCase());
     const joined = cells.join(' ');
-    if (joined.includes('datum') && joined.includes('betrag')) return i;
+    if (joined.includes('betrag') && (joined.includes('datum') || joined.includes('buchungstag'))) return i;
   }
   return 0;
 }
@@ -589,12 +589,13 @@ function autoMapColumns(headerCells){
     return i === -1 ? null : i;
   };
   return {
-    date: findIdx(h => h.includes('buchungsdatum')) ?? findIdx(h => h.includes('datum')),
+    date: findIdx(h => h.includes('buchungsdatum')) ?? findIdx(h => h.includes('buchungstag')) ?? findIdx(h => h.includes('datum')),
     amount: findIdx(h => h.includes('betrag')),
-    recipient: findIdx(h => h.includes('zahlungsempfänger') || h.includes('zahlungsempfaenger')),
+    recipient: findIdx(h => h.includes('zahlungsempfänger') || h.includes('zahlungsempfaenger') || h.includes('begünstig') || h.includes('beguenstig') || h.includes('auftraggeber')),
     payer: findIdx(h => h.includes('zahlungspflichtige')),
     purpose: findIdx(h => h.includes('verwendungszweck')),
     status: findIdx(h => h.includes('status')),
+    category: findIdx(h => h.includes('kategorie')),
   };
 }
 
@@ -617,14 +618,30 @@ function parseBankCsv(text){
   return { headerCells, colMap, rows, delimiter, headerIdx };
 }
 
+const GERMAN_MONTHS_3 = {
+  jan:1, feb:2, 'mär':3, mrz:3, apr:4, mai:5, jun:6, jul:7, aug:8, sep:9, okt:10, nov:11, dez:12,
+};
+
 function parseGermanDate(str){
   if (!str) return null;
-  const m = str.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
-  if (!m) return null;
-  let [, d, mo, y] = m;
-  if (y.length === 2) y = (parseInt(y, 10) <= 79 ? '20' : '19') + y;
-  d = d.padStart(2, '0'); mo = mo.padStart(2, '0');
-  return `${y}-${mo}-${d}`;
+  const s = str.trim();
+  // Format A: TT.MM.JJ(JJ) — Standard-DKB-Export, z.B. "20.07.26"
+  let m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+  if (m){
+    let [, d, mo, y] = m;
+    if (y.length === 2) y = (parseInt(y, 10) <= 79 ? '20' : '19') + y;
+    return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  // Format B: "Wochentag, TT. Monatsname JJJJ" — z.B. aus Apple-Numbers-Exporten,
+  // "Mo., 27. Mai 2024" oder "Mi., 01. März 2023"
+  m = s.match(/^[A-Za-zÄÖÜäöü]+\.?,?\s*(\d{1,2})\.\s*([A-Za-zÄÖÜäöü]+)\.?\s*(\d{4})$/);
+  if (m){
+    const [, d, monName, y] = m;
+    const key = monName.toLowerCase().replace(/\.$/, '').slice(0, 3);
+    const mn = GERMAN_MONTHS_3[key];
+    if (mn) return `${y}-${String(mn).padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  return null;
 }
 
 function parseGermanAmount(str){
@@ -652,13 +669,14 @@ function buildCandidate(row, colMap, headerCells){
   const recipient = at(colMap.recipient);
   const payer = at(colMap.payer);
   const purpose = at(colMap.purpose);
+  const sourceCategory = at(colMap.category).trim();
   const isoDate = parseGermanDate(dateRaw);
   const amount = parseGermanAmount(amountRaw);
   const description = buildDescription(recipient, payer, purpose);
-  const usedKeys = [colMap.date, colMap.amount, colMap.recipient, colMap.payer, colMap.purpose]
+  const usedKeys = [colMap.date, colMap.amount, colMap.recipient, colMap.payer, colMap.purpose, colMap.category]
     .filter(i => i != null && i >= 0)
     .map(i => headerCells[i] || `Spalte ${i + 1}`);
-  return { isoDate, amount, description, status, raw: row.raw, usedKeys };
+  return { isoDate, amount, description, status, sourceCategory, raw: row.raw, usedKeys };
 }
 
 async function computeHash(isoDate, amount, lineText){
@@ -1204,7 +1222,9 @@ async function buildPreview(){
     if (isPending) statusFlag = 'vorgemerkt';
     else if (existingHashes.has(hash) || seenInFile.has(hash)) statusFlag = 'duplicate';
     seenInFile.add(hash);
-    const category = matchCategory(candidate.description);
+    const category = (candidate.sourceCategory && CATEGORIES.includes(candidate.sourceCategory))
+      ? candidate.sourceCategory
+      : matchCategory(candidate.description);
     const nameGuess = (candidate.description.split(' — ')[0] || '').toLowerCase();
     previewRows.push({
       candidate, hash, statusFlag, category,
@@ -1270,6 +1290,7 @@ function renderImport(container){
             ${mappingSelect('payer', 'Zahlungspflichtige*r')}
             ${mappingSelect('purpose', 'Verwendungszweck')}
             ${mappingSelect('status', 'Status')}
+            ${mappingSelect('category', 'Kategorie (falls vorhanden)')}
           </div>
         </details>
       ` : ''}
