@@ -129,6 +129,10 @@
   }
   #loginForm input:focus{outline:2px solid var(--primary); outline-offset:1px; background:var(--surface);}
   .login-error{color:var(--expense); font-size:13px; margin:4px 0 0 0;}
+  .login-info{color:var(--income); font-size:13px; margin:4px 0 0 0;}
+  .login-forgot{text-align:center; margin:12px 0 0 0;}
+  .login-forgot a{color:var(--text-muted); font-size:13px; text-decoration:underline;}
+  .login-forgot a:hover{color:var(--text);}
 
   /* ======================================================================
      BUTTONS / FORM CONTROLS
@@ -211,8 +215,21 @@
   .dashboard-controls{display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:14px; align-items:end;}
   @media (max-width:700px){
     .grid-2, .stat-cards, .dashboard-controls{grid-template-columns:1fr;}
-    .app-header{padding:10px 14px;}
+    .app-header{padding:10px 14px; row-gap:8px;}
+    .brand{order:1;}
+    .header-user{order:2;}
+    .tabs{order:3; flex-basis:100%; margin:0 -14px; padding:0 14px;}
     .view-container{padding:14px;}
+    .view-header{flex-direction:column; align-items:flex-start; gap:4px;}
+    .card{padding:16px;}
+  }
+  @media (max-width:420px){
+    .header-user{gap:6px;}
+    .header-user .btn-sm{padding:5px 8px; font-size:12px;}
+    .icon-btn{width:30px; height:30px; font-size:14px;}
+    .role-badge{padding:3px 7px; font-size:11px;}
+    .stat-card .value{font-size:22px;}
+    .login-card{padding:28px 22px;}
   }
 
   /* ======================================================================
@@ -245,9 +262,21 @@
   .chart-checkbox input{cursor:pointer;}
   .chart-note{font-size:12px; color:var(--text-faint); margin-top:8px;}
 
+  .fixed-split{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
+  .fixed-split-item{flex:0 0 auto;}
+  .fixed-split-item .label{font-size:12px; color:var(--text-muted); font-weight:600;}
+  .fixed-split-item .value{font-size:19px; font-weight:700; font-family:var(--font-display); margin-top:2px;}
+  .fixed-split-bar{flex:1 1 140px; min-width:100px; height:10px; border-radius:999px; background:var(--income-bg); overflow:hidden;}
+  .fixed-split-bar-fixed{height:100%; background:var(--income); border-radius:999px 0 0 999px;}
+  @media (max-width:700px){
+    .fixed-split{flex-direction:column; align-items:stretch;}
+    .fixed-split-bar{order:3; width:100%;}
+  }
+
   /* ======================================================================
      TABLES / LISTS
      ====================================================================== */
+  .table-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
   .data-table{font-size:13.5px;}
   .data-table th{
     text-align:left; padding:8px 10px; border-bottom:1px solid var(--border);
@@ -262,17 +291,43 @@
 
   .txn-list{display:flex; flex-direction:column; gap:8px;}
   .txn-row{
-    display:grid; grid-template-columns:90px 1fr 110px 190px 32px; gap:12px; align-items:center;
+    display:grid;
+    grid-template-columns:28px 90px 1fr 110px 210px;
+    grid-template-areas:"check date desc amount actions";
+    gap:12px; align-items:center;
     padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface);
     min-width:0;
   }
   .txn-row > *{min-width:0;}
-  .txn-row.compact{grid-template-columns:90px 1fr 110px;}
+  .txn-row.compact{
+    grid-template-columns:90px 1fr 110px 150px;
+    grid-template-areas:"date desc amount actions";
+  }
+  .txn-row.txn-row-categorize{grid-template-columns:28px 90px 1fr 110px 260px;}
+  .txn-row [data-role="select"]{grid-area:check;}
+  .txn-row .date{grid-area:date; color:var(--text-muted); font-size:13px;}
+  .txn-row .txn-desc{grid-area:desc; min-width:0;}
   .txn-row .desc{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .txn-row .date{color:var(--text-muted); font-size:13px;}
+  .txn-row .amount{grid-area:amount;}
+  .txn-row .txn-actions{grid-area:actions; display:flex; align-items:center; gap:8px;}
   @media (max-width:700px){
-    .txn-row{grid-template-columns:1fr; gap:6px;}
-    .txn-row .amount{justify-self:start;}
+    .txn-row, .txn-row.compact, .txn-row.txn-row-categorize{
+      grid-template-columns:auto 1fr auto;
+      grid-template-areas:
+        "check date amount"
+        "desc desc desc"
+        "actions actions actions";
+      row-gap:6px; column-gap:8px;
+    }
+    .txn-row.compact{
+      grid-template-columns:1fr auto;
+      grid-template-areas:
+        "date amount"
+        "desc desc"
+        "actions actions";
+    }
+    .txn-row .amount{justify-self:end;}
+    .txn-row .txn-actions{justify-content:space-between; flex-wrap:wrap; border-top:1px solid var(--border); padding-top:8px; margin-top:2px;}
   }
 
   .raw-details{margin-top:6px; grid-column:1/-1; min-width:0;}
@@ -281,6 +336,19 @@
   .raw-list{display:grid; grid-template-columns:max-content minmax(0,1fr); gap:3px 14px; margin:8px 0 0 0; font-size:12.5px;}
   .raw-list dt{color:var(--text-muted); font-weight:600; min-width:0;}
   .raw-list dd{margin:0; color:var(--text); min-width:0; overflow-wrap:anywhere;}
+
+  .top-expense-row{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface);
+  }
+  .top-expense-row .date{color:var(--text-muted); font-size:13px; flex:0 0 auto;}
+  .top-expense-row .desc{font-weight:600; flex:1 1 160px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .top-expense-row .amount{flex:0 0 auto; margin-left:auto;}
+  @media (max-width:700px){
+    .top-expense-row .desc{flex-basis:100%; order:1; white-space:normal;}
+    .top-expense-row .date{order:2;}
+    .top-expense-row .amount{order:3; margin-left:auto;}
+  }
 
   .row-actions{display:flex; align-items:center; gap:6px;}
   .checkbox-cell{width:28px;}
@@ -354,7 +422,9 @@
           <input type="password" id="loginPassword" required autocomplete="current-password">
         </label>
         <button type="submit" class="btn btn-primary btn-block">Anmelden</button>
+        <p class="login-forgot"><a href="#" id="forgotPasswordLink">Passwort vergessen?</a></p>
         <p id="loginError" class="login-error" hidden></p>
+        <p id="loginInfo" class="login-info" hidden></p>
       </form>
     </div>
   </div>
@@ -468,6 +538,7 @@ function categoryColor(cat){
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
   initializeAuth, browserLocalPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut,
+  sendPasswordResetEmail,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
   getFirestore, initializeFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
@@ -1169,6 +1240,27 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
     errEl.hidden = false;
   }
 });
+document.getElementById('forgotPasswordLink').addEventListener('click', async e => {
+  e.preventDefault();
+  const errEl = document.getElementById('loginError');
+  const infoEl = document.getElementById('loginInfo');
+  errEl.hidden = true;
+  infoEl.hidden = true;
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!email){
+    errEl.textContent = 'Bitte zuerst die E-Mail-Adresse oben eingeben.';
+    errEl.hidden = false;
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    infoEl.textContent = 'E-Mail zum Zurücksetzen des Passworts wurde gesendet.';
+    infoEl.hidden = false;
+  } catch (err){
+    errEl.textContent = 'Fehler: ' + err.message;
+    errEl.hidden = false;
+  }
+});
 document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
 document.getElementById('undoBtn').addEventListener('click', undoLastAction);
 document.getElementById('refreshBtn').addEventListener('click', () => location.reload());
@@ -1191,10 +1283,7 @@ function switchTab(tab){
 /* ========================================================================
    APP-SHELL / ROUTER
    ======================================================================== */
-let __renderCallCount = 0;
 function renderCurrentView(){
-  __renderCallCount++;
-  console.log('[DEBUG] renderCurrentView Aufruf #' + __renderCallCount, { tab: state.currentTab });
   const container = document.getElementById('viewContainer');
   if (state.currentTab === 'import' && state.importState.dirty){
     // Ungespeicherte Import-Vorschau nicht durch Live-Updates wegrendern.
@@ -1380,6 +1469,8 @@ function renderDashboard(container){
 
   const incomeBadge = computeBadge(d.stats.income, d.avgByCategory[INCOME_CATEGORY], d.periodMonthsCount);
   const expenseBadge = computeBadge(d.stats.expense, d.avgExpenseTotal, d.periodMonthsCount);
+  const incomeYoyBadge = d.yoy ? computeBadge(d.stats.income, d.yoy.stats.income, 1) : null;
+  const expenseYoyBadge = d.yoy ? computeBadge(d.stats.expense, d.yoy.stats.expense, 1) : null;
 
   const barCategories = category === 'all' ? CATEGORIES.filter(c => c !== INCOME_CATEGORY) : [category];
   const tableRows = barCategories.map(cat => {
@@ -1438,11 +1529,13 @@ function renderDashboard(container){
         <div class="label">Einnahmen</div>
         <div class="value num">${formatCurrency(d.stats.income)}</div>
         <div class="badge ${incomeBadge.cls}">${incomeBadge.label}</div>
+        ${incomeYoyBadge ? `<div class="badge ${incomeYoyBadge.cls}" style="margin-top:6px;" title="Vergleich mit ${monthLabel(d.yoy.monthKey)}">vs. Vorjahr: ${incomeYoyBadge.label}</div>` : ''}
       </div>
       <div class="stat-card expense">
         <div class="label">Ausgaben</div>
         <div class="value num">${formatCurrency(d.stats.expense)}</div>
         <div class="badge ${expenseBadge.cls}">${expenseBadge.label}</div>
+        ${expenseYoyBadge ? `<div class="badge ${expenseYoyBadge.cls}" style="margin-top:6px;" title="Vergleich mit ${monthLabel(d.yoy.monthKey)}">vs. Vorjahr: ${expenseYoyBadge.label}</div>` : ''}
       </div>
       <div class="stat-card">
         <div class="label">Saldo</div>
@@ -1454,6 +1547,7 @@ function renderDashboard(container){
       <h3>Ausgaben nach Kategorie${category !== 'all' ? ` — ${esc(category)}` : ''}</h3>
       <div class="chart-wrap"><canvas id="barChart"></canvas></div>
       ${d.periodMonthsCount > 1 ? `<p class="chart-note">Zeitraum umfasst ${d.periodMonthsCount} Monate — „Ø pro Monat“ ist der Durchschnitt eines einzelnen Monats, „Zeitraum“ die Summe über den gesamten Zeitraum.</p>` : ''}
+      <div class="table-scroll">
       <table class="data-table" style="margin-top:14px;">
         <thead><tr><th>Kategorie</th><th>Zeitraum</th><th>Ø pro Monat</th><th>Vergleich</th></tr></thead>
         <tbody>
@@ -1467,6 +1561,7 @@ function renderDashboard(container){
           `).join('')}
         </tbody>
       </table>
+      </div>
     </div>
 
     <div class="card">
@@ -1481,6 +1576,59 @@ function renderDashboard(container){
       </div>
       <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
       ${state.dashboard.chartCategories.size > 0 ? `<p class="chart-note">Vergleich einzelner Kategorien über alle Monate. Zum Zurückschalten auf Saldo/Ø-Referenzlinie alle Häkchen entfernen.</p>` : ''}
+    </div>
+
+    <div class="card">
+      <h3>Fixkosten (automatisch erkannt)</h3>
+      ${d.recurring.length === 0 ? `
+        <p class="chart-note">Noch keine wiederkehrenden Buchungen erkannt (braucht mind. 3 Monate mit stabilem Betrag pro Empfänger).</p>
+      ` : `
+        <div class="fixed-split">
+          <div class="fixed-split-item">
+            <div class="label">Fixkosten im Zeitraum</div>
+            <div class="value num">${formatCurrency(d.fixedTotal)}</div>
+          </div>
+          <div class="fixed-split-bar">
+            <div class="fixed-split-bar-fixed" style="width:${d.stats.expense > 0 ? Math.min(100, (d.fixedTotal / d.stats.expense) * 100) : 0}%"></div>
+          </div>
+          <div class="fixed-split-item">
+            <div class="label">Variable Ausgaben im Zeitraum</div>
+            <div class="value num">${formatCurrency(d.variableTotal)}</div>
+          </div>
+        </div>
+        <div class="table-scroll">
+        <table class="data-table" style="margin-top:16px;">
+          <thead><tr><th>Erkannt als Fixkosten</th><th>Kategorie</th><th>Ø Betrag</th><th>Monate</th></tr></thead>
+          <tbody>
+            ${d.recurring.slice(0, 15).map(r => `
+              <tr>
+                <td>${esc(r.displayName)}</td>
+                <td>${categoryDot(r.category)}${esc(r.category)}</td>
+                <td class="num">${formatCurrency(-r.avgAmount)}</td>
+                <td class="num">${r.monthsCount}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        </div>
+      `}
+    </div>
+
+    <div class="card">
+      <h3>Größte Ausgaben im Zeitraum</h3>
+      ${d.topExpenses.length === 0 ? `
+        <p class="chart-note">Keine Ausgaben im gewählten Zeitraum.</p>
+      ` : `
+        <div class="txn-list">
+          ${d.topExpenses.map(t => `
+            <div class="top-expense-row">
+              <div class="date num">${formatDateDisplay(t.date)}</div>
+              <div class="desc">${categoryDot(t.category)}${esc(t.description)}</div>
+              <div class="amount num neg">${formatCurrency(t.amount)}</div>
+            </div>
+          `).join('')}
+        </div>
+      `}
     </div>
   `;
 
@@ -1981,15 +2129,15 @@ function renderCategorize(container){
 function renderCategorizeRow(t){
   const nameGuess = (t.description.split(' — ')[0] || '').toLowerCase();
   return `
-    <div class="txn-row" data-txn-id="${t.id}" style="grid-template-columns:28px 90px 1fr 110px 260px;">
+    <div class="txn-row txn-row-categorize" data-txn-id="${t.id}">
       <input type="checkbox" data-role="select">
       <div class="date num">${formatDateDisplay(t.date)}</div>
-      <div>
+      <div class="txn-desc">
         <div class="desc">${esc(t.description)}</div>
         ${renderRawDetails(t.raw, t.usedKeys || [])}
       </div>
       <div class="amount num ${t.amount >= 0 ? 'pos' : 'neg'}">${formatCurrency(t.amount)}</div>
-      <div>
+      <div class="txn-actions">
         <select data-role="category">${categoryOptions(t.category)}</select>
         <div class="rule-inline">
           <label><input type="checkbox" data-role="saveRule"> Regel merken</label>
@@ -2037,6 +2185,7 @@ function renderRules(container){
       ${rules.length === 0 ? `
         <div class="empty-state"><div class="big">🔖</div>${store.rules.length === 0 ? 'Noch keine Regeln vorhanden.' : `Keine Treffer für „${esc(state.rulesSearch)}“.`}</div>
       ` : `
+        <div class="table-scroll">
         <table class="data-table">
           <thead><tr><th>Schlüsselwort</th><th>Kategorie</th><th></th></tr></thead>
           <tbody>
@@ -2049,6 +2198,7 @@ function renderRules(container){
             `).join('')}
           </tbody>
         </table>
+        </div>
       `}
     </div>
   `;
@@ -2094,7 +2244,6 @@ function renderRules(container){
    ALLE BUCHUNGEN: RENDERING
    ======================================================================== */
 function renderAllTransactions(container){
-  console.log('[DEBUG] renderAllTransactions start', { month: state.allView.month, category: state.allView.category, totalTx: store.transactions.length });
   const av = state.allView;
   const allMonthKeys = getAllMonthKeys(store.transactions);
 
@@ -2110,15 +2259,12 @@ function renderAllTransactions(container){
     const q = av.search.trim().toLowerCase();
     filtered = filtered.filter(t => t.description.toLowerCase().includes(q));
   }
-  console.log('[DEBUG] gefiltert', { filteredCount: filtered.length });
 
   av.selection = new Set([...av.selection].filter(id => filtered.some(t => t.id === id)));
   const isAdmin = state.role === 'admin';
   const visible = filtered.slice(0, av.visibleCount);
   const hasMore = filtered.length > visible.length;
-  console.log('[DEBUG] vor innerHTML-Aufbau', { visibleCount: visible.length, isAdmin });
 
-  const htmlStart = performance.now();
   container.innerHTML = `
     <div class="view-header">
       <div>
@@ -2178,7 +2324,6 @@ function renderAllTransactions(container){
       `}
     </div>
   `;
-  console.log('[DEBUG] innerHTML gesetzt', { dauerMs: (performance.now() - htmlStart).toFixed(1), htmlLength: container.innerHTML.length });
 
   document.getElementById('filterMonth').addEventListener('change', e => { av.month = e.target.value; av.visibleCount = 80; renderAllTransactions(container); });
   document.getElementById('filterCategory').addEventListener('change', e => { av.category = e.target.value; av.visibleCount = 80; renderAllTransactions(container); });
@@ -2193,7 +2338,6 @@ function renderAllTransactions(container){
     const val = e.target.value;
     searchTimer = setTimeout(() => { av.search = val; av.visibleCount = 80; renderAllTransactions(container); }, 300);
   });
-  console.log('[DEBUG] Basis-Listener verdrahtet, starte Zeilen-Verdrahtung');
 
   container.querySelectorAll('[data-txn-id]').forEach(row => {
     const id = row.dataset.txnId;
@@ -2217,7 +2361,6 @@ function renderAllTransactions(container){
     const delBtn = row.querySelector('[data-role="delete"]');
     if (delBtn) delBtn.addEventListener('click', () => deleteTransactionById(id));
   });
-  console.log('[DEBUG] Zeilen-Verdrahtung fertig');
 
   if (isAdmin){
     document.getElementById('selectAllAllCb').addEventListener('change', e => {
@@ -2237,24 +2380,25 @@ function renderAllTransactions(container){
       av.selection.clear();
     });
   }
-  console.log('[DEBUG] renderAllTransactions komplett fertig');
 }
 
 function renderAllRow(t, isAdmin){
   return `
-    <div class="txn-row ${isAdmin ? '' : 'compact'}" data-txn-id="${t.id}" style="grid-template-columns:${isAdmin ? '28px 90px 1fr 110px 210px 34px' : '90px 1fr 110px'};">
+    <div class="txn-row ${isAdmin ? '' : 'compact'}" data-txn-id="${t.id}">
       ${isAdmin ? `<input type="checkbox" data-role="select">` : ''}
       <div class="date num">${formatDateDisplay(t.date)}</div>
-      <div>
+      <div class="txn-desc">
         <div class="desc">${esc(t.description)}</div>
         ${renderRawDetails(t.raw, t.usedKeys || [])}
       </div>
       <div class="amount num ${t.amount >= 0 ? 'pos' : 'neg'}">${formatCurrency(t.amount)}</div>
       ${isAdmin ? `
-        <select data-role="category">${categoryOptions(t.category)}</select>
-        <button class="btn btn-danger btn-sm" data-role="delete" title="Löschen">🗑</button>
+        <div class="txn-actions">
+          <select data-role="category">${categoryOptions(t.category)}</select>
+          <button class="btn btn-danger btn-sm" data-role="delete" title="Löschen">🗑</button>
+        </div>
       ` : `
-        <div><span class="badge badge-neutral">${categoryDot(t.category)}${esc(t.category)}</span></div>
+        <div class="txn-actions"><span class="badge badge-neutral">${categoryDot(t.category)}${esc(t.category)}</span></div>
       `}
     </div>
   `;
