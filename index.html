@@ -480,10 +480,11 @@ const fbApp = initializeApp(firebaseConfig);
 // aus). browserLocalPersistence nutzt stattdessen das robustere localStorage.
 const auth = initializeAuth(fbApp, { persistence: browserLocalPersistence });
 // Safari (WebKit) blockiert Firestores Standard-WebChannel-Verbindung teils mit
-// "Fetch API cannot load ... due to access control checks." Diese Einstellung lässt
-// die SDK automatisch auf Long-Polling wechseln, wenn die Streaming-Verbindung nicht
-// funktioniert — betrifft nur den Transportweg, nicht Daten oder Sicherheit.
-const db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
+// "Fetch API cannot load ... due to access control checks." experimentalForceLongPolling
+// überspringt den fehlschlagenden ersten Verbindungsversuch komplett (statt erst zu
+// probieren und danach automatisch zu wechseln) — betrifft nur den Transportweg, nicht
+// Daten oder Sicherheit.
+const db = initializeFirestore(fbApp, { experimentalForceLongPolling: true });
 
 /* ========================================================================
    ZUSTAND / STORE
