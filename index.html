@@ -383,13 +383,17 @@ import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+  getFirestore, initializeFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
   query, orderBy, onSnapshot, writeBatch, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
-const db = getFirestore(fbApp);
+// Safari (WebKit) blockiert Firestores Standard-WebChannel-Verbindung teils mit
+// "Fetch API cannot load ... due to access control checks." Diese Einstellung lässt
+// die SDK automatisch auf Long-Polling wechseln, wenn die Streaming-Verbindung nicht
+// funktioniert — betrifft nur den Transportweg, nicht Daten oder Sicherheit.
+const db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
 
 /* ========================================================================
    ZUSTAND / STORE
