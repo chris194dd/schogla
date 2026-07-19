@@ -519,7 +519,7 @@ const state = {
     category: 'all',
     search: '',
     selection: new Set(),
-    visibleCount: 150, // Pagination: verhindert Tab-Abstürze bei sehr langen Listen
+    visibleCount: 80, // Pagination: verhindert Tab-Abstürze bei sehr langen Listen
   },
   importState: emptyImportState(),
 };
@@ -680,13 +680,29 @@ function showToast(message, type = 'info'){
   }, 4200);
 }
 
-function renderRawDetails(raw, excludeKeys){
+function hasRawDetails(raw, excludeKeys){
   const exclude = new Set(excludeKeys || []);
-  const entries = Object.entries(raw || {}).filter(([k, v]) => !exclude.has(k) && v !== '' && v != null);
-  if (!entries.length) return '';
-  return `<details class="raw-details"><summary>Details</summary><dl class="raw-list">${
-    entries.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')
-  }</dl></details>`;
+  return Object.entries(raw || {}).some(([k, v]) => !exclude.has(k) && v !== '' && v != null);
+}
+
+// Rendert nur die leere Hülle (kein <dl>-Inhalt). Das spart bei langen Listen sehr viele
+// DOM-Knoten, die sonst auch im eingeklappten Zustand existieren würden. Der eigentliche
+// Inhalt wird über wireLazyRawDetails() erst beim ersten Aufklappen nachgeladen.
+function renderRawDetails(raw, excludeKeys){
+  if (!hasRawDetails(raw, excludeKeys)) return '';
+  return `<details class="raw-details"><summary>Details</summary><dl class="raw-list"></dl></details>`;
+}
+
+function wireLazyRawDetails(rowEl, raw, excludeKeys){
+  const details = rowEl.querySelector('.raw-details');
+  if (!details) return;
+  details.addEventListener('toggle', () => {
+    if (!details.open || details.dataset.loaded) return;
+    const exclude = new Set(excludeKeys || []);
+    const entries = Object.entries(raw || {}).filter(([k, v]) => !exclude.has(k) && v !== '' && v != null);
+    details.querySelector('.raw-list').innerHTML = entries.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
+    details.dataset.loaded = '1';
+  });
 }
 
 /* ========================================================================
@@ -1801,6 +1817,7 @@ function renderImport(container){
   container.querySelectorAll('[data-preview-idx]').forEach(row => {
     const idx = parseInt(row.dataset.previewIdx, 10);
     const pr = state.importState.previewRows[idx];
+    wireLazyRawDetails(row, pr.candidate.raw, pr.candidate.usedKeys);
 
     row.querySelector('[data-role="include"]').addEventListener('change', e => {
       pr.include = e.target.checked;
@@ -1915,6 +1932,8 @@ function renderCategorize(container){
 
   container.querySelectorAll('[data-txn-id]').forEach(row => {
     const id = row.dataset.txnId;
+    const t = unclassified.find(x => x.id === id);
+    if (t) wireLazyRawDetails(row, t.raw, t.usedKeys || []);
     const cb = row.querySelector('[data-role="select"]');
     if (cb){
       cb.checked = state.categorizeSelection.has(id);
@@ -2153,22 +2172,24 @@ function renderAllTransactions(container){
     </div>
   `;
 
-  document.getElementById('filterMonth').addEventListener('change', e => { av.month = e.target.value; av.visibleCount = 150; renderAllTransactions(container); });
-  document.getElementById('filterCategory').addEventListener('change', e => { av.category = e.target.value; av.visibleCount = 150; renderAllTransactions(container); });
+  document.getElementById('filterMonth').addEventListener('change', e => { av.month = e.target.value; av.visibleCount = 80; renderAllTransactions(container); });
+  document.getElementById('filterCategory').addEventListener('change', e => { av.category = e.target.value; av.visibleCount = 80; renderAllTransactions(container); });
   document.getElementById('exportCsvBtn').addEventListener('click', () => {
     exportTransactionsCsv(filtered, `kontobuch-export-${todayIso()}.csv`);
   });
   const loadMoreBtn = document.getElementById('loadMoreBtn');
-  if (loadMoreBtn) loadMoreBtn.addEventListener('click', () => { av.visibleCount += 150; renderAllTransactions(container); });
+  if (loadMoreBtn) loadMoreBtn.addEventListener('click', () => { av.visibleCount += 80; renderAllTransactions(container); });
   let searchTimer = null;
   document.getElementById('filterSearch').addEventListener('input', e => {
     clearTimeout(searchTimer);
     const val = e.target.value;
-    searchTimer = setTimeout(() => { av.search = val; av.visibleCount = 150; renderAllTransactions(container); }, 300);
+    searchTimer = setTimeout(() => { av.search = val; av.visibleCount = 80; renderAllTransactions(container); }, 300);
   });
 
   container.querySelectorAll('[data-txn-id]').forEach(row => {
     const id = row.dataset.txnId;
+    const t = filtered.find(x => x.id === id);
+    if (t) wireLazyRawDetails(row, t.raw, t.usedKeys || []);
     const cb = row.querySelector('[data-role="select"]');
     if (cb){
       cb.checked = av.selection.has(id);
