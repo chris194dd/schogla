@@ -42,6 +42,10 @@
   }
 
   *{box-sizing:border-box;}
+  /* Sorgt dafür, dass [hidden] immer greift, auch wenn ein Element eigene
+     display:flex/grid-Regeln hat (sonst gewinnt die eigene Regel gegen das
+     unsichtbare UA-Default von [hidden] und das Element bleibt sichtbar). */
+  [hidden]{display:none !important;}
   html,body{margin:0;padding:0;}
   body{
     background:var(--bg);
